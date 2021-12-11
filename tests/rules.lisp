@@ -60,3 +60,7 @@
   (is (equal :-inf (parse 'rules::value "-inf")))
   (is (equal :+nan (parse 'rules::value "+nan")))
   (is (equal :-nan (parse 'rules::value "-nan"))))
+
+(test value-boolean
+  (is (equal t (parse 'rules::value "true")))
+  (is (equal nil (parse 'rules::value "false"))))

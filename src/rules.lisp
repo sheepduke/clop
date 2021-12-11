@@ -8,7 +8,8 @@
 (in-package clomp.rules)
 
 (defrule value
-    (or float
+    (or boolean
+        float
         integer))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -99,6 +100,14 @@
          (or "inf" "nan"))
   (:text t)
   (:lambda (text) (make-keyword (str:upcase text))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                           Boolean                            ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule boolean (or "true" "false")
+  (:text t)
+  (:lambda (text) (if (string= "true" text) t nil)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            Basic                             ;;;;
