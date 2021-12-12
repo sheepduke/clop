@@ -1,6 +1,7 @@
 (defpackage clomp.rules
-  (:use #:cl)
-  (:use #:esrap)
+  (:use #:cl
+        #:esrap)
+  (:local-nicknames (#:config #:clomp.config))
   (:import-from #:alexandria
                 #:make-keyword
                 #:symbolicate))
@@ -74,9 +75,7 @@
 ;;;;                            Float                             ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defrule float
-    (or float-special
-        float-normal))
+(defrule float (or float-special float-normal))
 
 ;; Normal values.
 (defrule float-normal
@@ -85,9 +84,7 @@
   (:text t)
   (:lambda (text) (parse-number text)))
 
-(defrule float-int
-    (and optional-sign
-         decimal-unsigned-int))
+(defrule float-int (and optional-sign decimal-unsigned-int))
 
 (defrule float-fraction (and "." digit-string))
 
@@ -98,8 +95,12 @@
 (defrule float-special
     (and optional-sign
          (or "inf" "nan"))
-  (:text t)
-  (:lambda (text) (make-keyword (str:upcase text))))
+  (:destructure (sign text)
+    (let ((positivep (or (null sign) (string= sign "+")))
+          (infp (string= text "inf")))
+      (if infp
+          (if positivep config:*decoder-value-+inf* config:*decoder-value--inf*)
+          (if positivep config:*decoder-value-+nan* config:*decoder-value--nan*)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                           Boolean                            ;;;;
@@ -107,7 +108,10 @@
 
 (defrule boolean (or "true" "false")
   (:text t)
-  (:lambda (text) (if (string= "true" text) t nil)))
+  (:lambda (text)
+    (if (string= "true" text)
+        config:*decoder-value-true*
+        config:*decoder-value-false*)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            Basic                             ;;;;
@@ -141,3 +145,8 @@
   (parse-number:parse-number (str:replace-all "_" "" string)
                              :radix radix
                              :start start))
+
+(local-time:parse-timestring "07:32:00")
+
+(local-time:parse-timestring "1979-05-27"
+                             :allow-missing-time-part t)

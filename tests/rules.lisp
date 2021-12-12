@@ -1,6 +1,7 @@
 (defpackage clomp-tests.rules
   (:use #:cl)
-  (:local-nicknames (#:rules #:clomp.rules))
+  (:local-nicknames (#:rules #:clomp.rules)
+                    (#:config #:clomp.config))
   (:import-from #:esrap
                 #:parse
                 #:esrap-parse-error)
@@ -56,11 +57,18 @@
   (signals esrap-parse-error (parse 'rules::value "6.e+20"))
   
   ;; Special values.
+  (is (equal :+inf (parse 'rules::value "inf")))
   (is (equal :+inf (parse 'rules::value "+inf")))
   (is (equal :-inf (parse 'rules::value "-inf")))
+  (is (equal :+nan (parse 'rules::value "nan")))
   (is (equal :+nan (parse 'rules::value "+nan")))
   (is (equal :-nan (parse 'rules::value "-nan"))))
 
 (test value-boolean
   (is (equal t (parse 'rules::value "true")))
-  (is (equal nil (parse 'rules::value "false"))))
+  (is (equal nil (parse 'rules::value "false")))
+
+  (let ((config:*decoder-value-true* :true)
+        (config:*decoder-value-false* :false))
+    (is (equal :true (parse 'rules::value "true")))
+    (is (equal :false (parse 'rules::value "false")))))
