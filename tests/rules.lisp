@@ -1,7 +1,8 @@
 (defpackage clode-tests.rules
   (:use #:cl)
   (:local-nicknames (#:rules #:clode.rules)
-                    (#:config #:clode.config))
+                    (#:config #:clode.config)
+                    (#:time #:local-time))
   (:import-from #:esrap
                 #:parse
                 #:esrap-parse-error)
@@ -72,3 +73,13 @@
         (config:*decoder-value-false* :false))
     (is (equal :true (parse 'rules::value "true")))
     (is (equal :false (parse 'rules::value "false")))))
+
+(test value-datetime
+  (is (time:timestamp= (time:parse-timestring "2012-12-30T01:23:45Z")
+                       (parse 'rules::value "2012-12-30T01:23:45Z")))
+  (is (equal '(:year 2021 :month 10 :day 12)
+             (parse 'rules::value "2021-10-12")))
+  (is (equal '(:hour 10 :minute 12 :second 34 :microsecond 560)
+             (parse 'rules::value "10:12:34.000560")))
+  (is (equal '(:year 2021 :month 10 :day 12 :hour 10 :minute 12 :second 34 :microsecond 210000)
+             (parse 'rules::value "2021-10-12 10:12:34.210000"))))

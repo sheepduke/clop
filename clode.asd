@@ -11,7 +11,8 @@
   :serial t
   :components ((:module "src"
                 :components
-                ((:file "config")
+                ((:file "util")
+                 (:file "config")
                  (:file "rules")
                  (:file "clode"))))
   :in-order-to ((test-op (test-op :clode-tests))))

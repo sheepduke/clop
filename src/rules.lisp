@@ -1,7 +1,8 @@
 (defpackage clode.rules
   (:use #:cl
         #:esrap)
-  (:local-nicknames (#:config #:clode.config))
+  (:local-nicknames (#:config #:clode.config)
+                    (#:time #:local-time))
   (:import-from #:alexandria
                 #:make-keyword
                 #:symbolicate))
@@ -10,6 +11,7 @@
 
 (defrule value
     (or boolean
+        date-time
         float
         integer))
 
@@ -114,6 +116,61 @@
         config:*decoder-value-false*)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                          Date Time                           ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule date-time
+    (or offset-date-time
+        local-date-time
+        local-date
+        local-time))
+
+(defrule offset-date-time (and full-date date-time-delimeter full-time)
+  (:text t)
+  (:lambda (text)
+    (funcall #'time:parse-timestring
+             (str:replace-first " " "T" text))))
+
+(defrule local-date-time (and full-date date-time-delimeter partial-time)
+  (:text t)
+  (:lambda (text) (funcall config:*decoder-local-date-time-parser* text)))
+
+(defrule local-date full-date
+  (:text t)
+  (:lambda (text) (funcall config:*decoder-local-date-parser* text)))
+
+(defrule local-time partial-time
+  (:text t)
+  (:lambda (text) (funcall config:*decoder-local-time-parser* text)))
+
+(defrule full-date (and date-year "-" date-month "-" date-day))
+
+(defrule full-time (and partial-time time-offset))
+
+(defrule partial-time
+    (and time-hour ":" time-minute ":" time-second (? time-second-fraction)))
+
+(defrule date-year (and digit digit digit digit))
+
+(defrule date-month (and digit digit))
+
+(defrule date-day (and digit digit))
+
+(defrule date-time-delimeter (or "T" " "))
+
+(defrule time-hour (and digit digit))
+
+(defrule time-minute (and digit digit))
+
+(defrule time-second (and digit digit))
+
+(defrule time-second-fraction (and "." (+ digit)))
+
+(defrule time-offset (or "Z" time-num-offset))
+
+(defrule time-num-offset (and (or "+" "-") time-hour ":" time-minute))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            Basic                             ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -145,8 +202,3 @@
   (parse-number:parse-number (str:replace-all "_" "" string)
                              :radix radix
                              :start start))
-
-(local-time:parse-timestring "07:32:00")
-
-(local-time:parse-timestring "1979-05-27"
-                             :allow-missing-time-part t)
