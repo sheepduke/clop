@@ -1,30 +1,32 @@
-(defsystem clomp
+(defsystem clode
   :version "0.1.0"
-  :description "CLOMP - Common Lisp tOMl Parser"
+  :description "CLODE - Common Lisp tOMl Parser"
   :license "MIT"
   :author "YUE Daian"
   :depends-on (#:alexandria
                #:esrap
                #:parse-number
+               #:local-time
                #:str)
   :serial t
   :components ((:module "src"
                 :components
-                ((:file "clomp")
-                 (:file "rules"))))
-  :in-order-to ((test-op (test-op :clomp-tests))))
+                ((:file "config")
+                 (:file "rules")
+                 (:file "clode"))))
+  :in-order-to ((test-op (test-op :clode-tests))))
 
-(defsystem clomp-tests
+(defsystem clode-tests
   :version "0.1.0"
   :license "MIT"
   :author "YUE Daian"
-  :depends-on (#:clomp
+  :depends-on (#:clode
                #:fiveam)
   :serial t
   :components ((:module "tests"
                 :components
-                ((:file "clomp")
+                ((:file "clode")
                  (:file "rules"))))
   :perform (test-op (op c)
                     (symbol-call :fiveam :run!
-                                 (find-symbol* :clomp :clomp-tests))))
+                                 (find-symbol* :clode :clode-tests))))

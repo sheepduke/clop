@@ -1,4 +1,4 @@
-(defpackage clomp.config
+(defpackage clode.config
   (:use #:cl)
   (:export
    #:*decoder-value-true*
@@ -8,7 +8,7 @@
    #:*decoder-value-+nan*
    #:*decoder-value--nan*))
 
-(in-package clomp.config)
+(in-package clode.config)
 
 (defvar *decoder-value-+inf* :+inf
   "The value of +inf when decoding TOML.")
