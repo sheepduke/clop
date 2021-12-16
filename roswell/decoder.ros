@@ -1,0 +1,20 @@
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
+(progn ;;init forms
+  (ros:ensure-asdf)
+  #+quicklisp(ql:quickload '(clop cl-json) :silent t)
+  (push :toml-test *features*)
+  (asdf:load-system 'clop :force t))
+
+(defpackage :ros.script.decoder.3848652702
+  (:use :cl))
+(in-package :ros.script.decoder.3848652702)
+
+(defun main (&rest argv)
+  (declare (ignorable argv))
+  (format t "~a~&"
+          (cl-json:encode-json-to-string (clop:parse-string (car argv)))))
+;;; vim: set ft=lisp lisp:
