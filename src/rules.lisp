@@ -1,13 +1,13 @@
-(defpackage clode.rules
+(defpackage clop.rules
   (:use #:cl
         #:esrap)
-  (:local-nicknames (#:config #:clode.config)
+  (:local-nicknames (#:config #:clop.config)
                     (#:time #:local-time))
   (:import-from #:alexandria
                 #:make-keyword
                 #:symbolicate))
 
-(in-package clode.rules)
+(in-package clop.rules)
 
 (defrule value
     (or boolean

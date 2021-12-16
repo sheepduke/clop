@@ -1,6 +1,6 @@
-(defsystem clode
+(defsystem clop
   :version "0.1.0"
-  :description "CLODE - Common Lisp tOMl Parser"
+  :description "CLOP - Common Lisp tOml Parser"
   :license "MIT"
   :author "YUE Daian"
   :depends-on (#:alexandria
@@ -14,20 +14,20 @@
                 ((:file "util")
                  (:file "config")
                  (:file "rules")
-                 (:file "clode"))))
-  :in-order-to ((test-op (test-op :clode-tests))))
+                 (:file "clop"))))
+  :in-order-to ((test-op (test-op :clop-tests))))
 
-(defsystem clode-tests
+(defsystem clop-tests
   :version "0.1.0"
   :license "MIT"
   :author "YUE Daian"
-  :depends-on (#:clode
+  :depends-on (#:clop
                #:fiveam)
   :serial t
   :components ((:module "tests"
                 :components
-                ((:file "clode")
+                ((:file "clop")
                  (:file "rules"))))
   :perform (test-op (op c)
                     (symbol-call :fiveam :run!
-                                 (find-symbol* :clode :clode-tests))))
+                                 (find-symbol* :clop :clop-tests))))

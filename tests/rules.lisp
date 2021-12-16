@@ -1,7 +1,7 @@
-(defpackage clode-tests.rules
+(defpackage clop-tests.rules
   (:use #:cl)
-  (:local-nicknames (#:rules #:clode.rules)
-                    (#:config #:clode.config)
+  (:local-nicknames (#:rules #:clop.rules)
+                    (#:config #:clop.config)
                     (#:time #:local-time))
   (:import-from #:esrap
                 #:parse
@@ -12,9 +12,9 @@
                 #:def-suite*
                 #:test))
 
-(in-package clode-tests.rules)
+(in-package clop-tests.rules)
 
-(def-suite* clode.rules :in clode-tests:clode)
+(def-suite* clop.rules :in clop-tests:clop)
 
 (test value-int
   ;; Decimal.

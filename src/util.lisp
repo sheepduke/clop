@@ -1,11 +1,11 @@
-(defpackage clode.util
+(defpackage clop.util
   (:use #:cl)
   (:local-nicknames (#:time #:local-time))
   (:export #:parse-local-date-time
            #:parse-local-date
            #:parse-local-time))
 
-(in-package clode.util)
+(in-package clop.util)
 
 (defun parse-local-date-time (date-time-string)
   "Parse given DATE-TIME-STRING and return a plist."

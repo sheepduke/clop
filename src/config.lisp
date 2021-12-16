@@ -1,6 +1,6 @@
-(defpackage clode.config
+(defpackage clop.config
   (:use #:cl)
-  (:local-nicknames (#:util #:clode.util))
+  (:local-nicknames (#:util #:clop.util))
   (:export #:*decoder-value-true*
            #:*decoder-value-false*
            #:*decoder-value-+inf*
@@ -11,7 +11,7 @@
            #:*decoder-local-date-parser*
            #:*decoder-local-time-parser*))
 
-(in-package clode.config)
+(in-package clop.config)
 
 (defvar *decoder-value-+inf* :+inf
   "The value of +inf when decoding TOML.")
