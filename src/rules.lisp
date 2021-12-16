@@ -10,7 +10,8 @@
 (in-package clop.rules)
 
 (defrule value
-    (or boolean
+    (or string
+        boolean
         date-time
         float
         integer))
@@ -42,8 +43,8 @@
 ;; Hex.
 (defrule hex-int
     (and hex-prefix
-         hex-digit
-         (* (and optional-underscore hex-digit)))
+         hex
+         (* (and optional-underscore hex)))
   (:text t)
   (:lambda (text) (parse-number text :radix 16 :start 2)))
 
@@ -116,6 +117,79 @@
         config:*decoder-value-false*)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                            String                            ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule string
+    (or multiline-basic-string
+        basic-string
+        multiline-literal-string
+        literal-string)
+  (:text t))
+
+;; Basic string.
+
+(defrule basic-string (and "\"" (* basic-char) "\"")
+  (:destructure (left-quote text right-quote)
+    (declare (ignore left-quote right-quote))
+    text))
+
+(defrule basic-char (or escaped-char basic-unescaped-char))
+
+(defrule escaped-char
+    (and "\\" (or (and "u" (string 4))
+                  (and "U" (string 8))
+                  "b" "t" "r" "n" "f" "\"" "\\"))
+  (:text t)
+  (:lambda (text)
+    (string
+     (case (elt text 1)
+       (#\b #\backspace)
+       (#\t #\tab)
+       (#\r #\return)
+       (#\n #\newline)
+       (#\f #\page)
+       (#\" #\")
+       (#\\ #\\)
+       (#\u (code-char (parse-integer (subseq text 2) :radix 16)))
+       (#\U (code-char (parse-integer (subseq text 2) :radix 16)))))))
+
+(defrule basic-unescaped-char (not "\""))
+
+;; Multi-line string.
+
+(defrule multiline-basic-string
+    (and "\"\"\"" (? #\newline) multiline-basic-body "\"\"\"")
+  (:destructure (left-quote newline text right-quote)
+    (declare (ignore left-quote newline right-quote))
+    text))
+
+(defrule multiline-basic-body
+    (* (or escaped-char
+           escaped-newline
+           (not "\"\"\"")))
+  (:text t))
+
+(defrule escaped-newline
+    (and "\\" (* whitespace) #\newline (* (or whitespace #\newline)))
+  (:text t)
+  (:constant ""))
+
+;; Literal string.
+
+(defrule literal-string (and "'" (* (not "'")) "'")
+  (:destructure (left-quote text right-quote)
+    (declare (ignore left-quote right-quote))
+    text))
+
+;; Literal multi-line string.
+
+(defrule multiline-literal-string (and "'''" (* (not "'''")) "'''")
+  (:destructure (left-quote text right-quote)
+    (declare (ignore left-quote right-quote))
+    text))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                          Date Time                           ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
@@ -184,7 +258,7 @@
 (defrule digit-string
     (and digit (* (and optional-underscore digit))))
 
-(defrule hex-digit
+(defrule hex
     (or digit
         (character-ranges (#\a #\f))
         (character-ranges (#\A #\F))))
@@ -192,6 +266,8 @@
 (defrule optional-underscore (? "_"))
 
 (defrule optional-sign (? (or "+" "-")))
+
+(defrule whitespace (or #\space #\tab))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                          Functions                           ;;;;

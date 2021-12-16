@@ -83,3 +83,33 @@
              (parse 'rules::value "10:12:34.000560")))
   (is (equal '(:year 2021 :month 10 :day 12 :hour 10 :minute 12 :second 34 :microsecond 210000)
              (parse 'rules::value "2021-10-12 10:12:34.210000"))))
+
+(test value-string
+  ;; Basic string.
+  (is (string= "hello" (parse 'rules::value "\"hello\"")))
+  (is (string= "δ" (parse 'rules::value "\"\\U000003B4\"")))
+  (is (string= "δ" (parse 'rules::value "\"\\u03B4\"")))
+  (is (string= "\\" (parse 'rules::value "\"\\\\\"")))
+
+  ;; Multi-line string.
+  (is (string= "The quick brown fox jumps over the lazy dog."
+               (parse 'rules::value "\"\"\"
+The quick brown \\
+
+
+  fox jumps over \\
+    the lazy dog.\"\"\""))
+      (string= "The quick brown fox jumps over the lazy dog."
+               (parse 'rules::value "\"\"\"\\
+       The quick brown \\
+       fox jumps over \\
+       the lazy dog.\\
+       \"\"\"")))
+
+  ;; String literal.
+  (is (string= "C:\\Users\\nodejs\\templates"
+               (parse 'rules::value "'C:\\Users\\nodejs\\templates'")))
+  (is (string= "Tom \"Dubs\" Preston-Werner"
+               (parse 'rules::value "'Tom \"Dubs\" Preston-Werner'")))
+  (is (string= "I [dw]on't need \\d{2} apples"
+               (parse 'rules::value "'''I [dw]on't need \\d{2} apples'''"))))
