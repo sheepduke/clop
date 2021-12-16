@@ -69,8 +69,8 @@
   (is (equal t (parse 'rules::value "true")))
   (is (equal nil (parse 'rules::value "false")))
 
-  (let ((config:*decoder-value-true* :true)
-        (config:*decoder-value-false* :false))
+  (let ((config:*value-true* :true)
+        (config:*value-false* :false))
     (is (equal :true (parse 'rules::value "true")))
     (is (equal :false (parse 'rules::value "false")))))
 

@@ -102,8 +102,8 @@
     (let ((positivep (or (null sign) (string= sign "+")))
           (infp (string= text "inf")))
       (if infp
-          (if positivep config:*decoder-value-+inf* config:*decoder-value--inf*)
-          (if positivep config:*decoder-value-+nan* config:*decoder-value--nan*)))))
+          (if positivep config:*value-+inf* config:*value--inf*)
+          (if positivep config:*value-+nan* config:*value--nan*)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                           Boolean                            ;;;;
@@ -113,8 +113,8 @@
   (:text t)
   (:lambda (text)
     (if (string= "true" text)
-        config:*decoder-value-true*
-        config:*decoder-value-false*)))
+        config:*value-true*
+        config:*value-false*)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            String                            ;;;;
@@ -207,15 +207,15 @@
 
 (defrule local-date-time (and full-date date-time-delimeter partial-time)
   (:text t)
-  (:lambda (text) (funcall config:*decoder-local-date-time-parser* text)))
+  (:lambda (text) (funcall config:*local-date-time-parser* text)))
 
 (defrule local-date full-date
   (:text t)
-  (:lambda (text) (funcall config:*decoder-local-date-parser* text)))
+  (:lambda (text) (funcall config:*local-date-parser* text)))
 
 (defrule local-time partial-time
   (:text t)
-  (:lambda (text) (funcall config:*decoder-local-time-parser* text)))
+  (:lambda (text) (funcall config:*local-time-parser* text)))
 
 (defrule full-date (and date-year "-" date-month "-" date-day))
 

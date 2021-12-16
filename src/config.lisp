@@ -1,44 +1,44 @@
 (defpackage clop.config
   (:use #:cl)
   (:local-nicknames (#:util #:clop.util))
-  (:export #:*decoder-value-true*
-           #:*decoder-value-false*
-           #:*decoder-value-+inf*
-           #:*decoder-value--inf*
-           #:*decoder-value-+nan*
-           #:*decoder-value--nan*
-           #:*decoder-local-date-time-parser*
-           #:*decoder-local-date-parser*
-           #:*decoder-local-time-parser*))
+  (:export #:*value-true*
+           #:*value-false*
+           #:*value-+inf*
+           #:*value--inf*
+           #:*value-+nan*
+           #:*value--nan*
+           #:*local-date-time-parser*
+           #:*local-date-parser*
+           #:*local-time-parser*))
 
 (in-package clop.config)
 
-(defvar *decoder-value-+inf* :+inf
+(defvar *value-+inf* :+inf
   "The value of +inf when decoding TOML.")
 
-(defvar *decoder-value--inf* :-inf
+(defvar *value--inf* :-inf
   "The value of -inf when decoding TOML.")
 
-(defvar *decoder-value-+nan* :+nan
+(defvar *value-+nan* :+nan
   "The value of +nan when decoding TOML.")
 
-(defvar *decoder-value--nan* :-nan
+(defvar *value--nan* :-nan
   "The value of -nan when decoding TOML.")
 
-(defvar *decoder-value-true* t
+(defvar *value-true* t
   "The value of true when decoding TOML.")
 
-(defvar *decoder-value-false* nil
+(defvar *value-false* nil
   "The value of false when decoding TOML.")
 
-(defvar *decoder-local-date-time-parser* #'util:parse-local-date-time
+(defvar *local-date-time-parser* #'util:parse-local-date-time
   "Function for parsing local date time of YYYY-MM-DDTHH:mm:ss etc etc.
 The function takes a string as input and returns corresponding value.")
 
-(defvar *decoder-local-date-parser* #'util:parse-local-date
+(defvar *local-date-parser* #'util:parse-local-date
   "Function for parsing local date of YYYY-MM-DD format.
 The function takes a string as input and returns corresponding value.")
 
-(defvar *decoder-local-time-parser* #'util:parse-local-time
+(defvar *local-time-parser* #'util:parse-local-time
   "Function for parsing local time of HH:mm:ss or HH:mm:ss.micro format.
 The function takes a string as input and returns corresponding value.")
