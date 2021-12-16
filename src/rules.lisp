@@ -5,9 +5,12 @@
                     (#:time #:local-time))
   (:import-from #:alexandria
                 #:make-keyword
-                #:symbolicate))
+                #:symbolicate)
+  (:export toml))
 
 (in-package clop.rules)
+
+(defrule toml value)
 
 (defrule value
     (or string
@@ -24,7 +27,8 @@
     (or hex-int
         oct-int
         bin-int
-        decimal-int))
+        decimal-int)
+  (:lambda (value) (value-or-alist :integer value)))
 
 ;; Decimal.
 (defrule decimal-int
@@ -78,7 +82,8 @@
 ;;;;                            Float                             ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defrule float (or float-special float-normal))
+(defrule float (or float-special float-normal)
+  (:lambda (value) (value-or-alist :float value)))
 
 ;; Normal values.
 (defrule float-normal
@@ -112,9 +117,10 @@
 (defrule boolean (or "true" "false")
   (:text t)
   (:lambda (text)
-    (if (string= "true" text)
-        config:*value-true*
-        config:*value-false*)))
+    (let ((value (if (string= "true" text)
+                     config:*value-true*
+                     config:*value-false*)))
+      (value-or-alist :bool value))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            String                            ;;;;
@@ -125,7 +131,8 @@
         basic-string
         multiline-literal-string
         literal-string)
-  (:text t))
+  (:text t)
+  (:lambda (value) (value-or-alist :string value)))
 
 ;; Basic string.
 
@@ -159,7 +166,7 @@
 ;; Multi-line string.
 
 (defrule multiline-basic-string
-    (and "\"\"\"" (? #\newline) multiline-basic-body "\"\"\"")
+    (and "\"\"\"" (? newline) multiline-basic-body "\"\"\"")
   (:destructure (left-quote newline text right-quote)
     (declare (ignore left-quote newline right-quote))
     text))
@@ -171,7 +178,7 @@
   (:text t))
 
 (defrule escaped-newline
-    (and "\\" (* whitespace) #\newline (* (or whitespace #\newline)))
+    (and "\\" (* whitespace) newline (* (or whitespace #\newline)))
   (:text t)
   (:constant ""))
 
@@ -202,20 +209,27 @@
 (defrule offset-date-time (and full-date date-time-delimeter full-time)
   (:text t)
   (:lambda (text)
-    (funcall #'time:parse-timestring
-             (str:replace-first " " "T" text))))
+    (let ((value (funcall #'time:parse-timestring
+                          (str:replace-first " " "T" text))))
+      (value-or-alist :datetime value))))
 
 (defrule local-date-time (and full-date date-time-delimeter partial-time)
   (:text t)
-  (:lambda (text) (funcall config:*local-date-time-parser* text)))
+  (:lambda (text)
+    (let ((value (funcall config:*local-date-time-parser* text)))
+      (value-or-alist :datetime-local value))))
 
 (defrule local-date full-date
   (:text t)
-  (:lambda (text) (funcall config:*local-date-parser* text)))
+  (:lambda (text)
+    (let ((value (funcall config:*local-date-parser* text)))
+      (value-or-alist :date-local value))))
 
 (defrule local-time partial-time
   (:text t)
-  (:lambda (text) (funcall config:*local-time-parser* text)))
+  (:lambda (text)
+    (let ((value (funcall config:*local-time-parser* text)))
+      (value-or-alist :time-local value))))
 
 (defrule full-date (and date-year "-" date-month "-" date-day))
 
@@ -269,6 +283,8 @@
 
 (defrule whitespace (or #\space #\tab))
 
+(defrule newline (or #\newline (and #\return #\newline)))
+
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                          Functions                           ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -278,3 +294,9 @@
   (parse-number:parse-number (str:replace-all "_" "" string)
                              :radix radix
                              :start start))
+
+(defun value-or-alist (type value)
+  (declare (ignorable type))
+  #+toml-test (list (cons :type (string-downcase type))
+                    (cons :value (format nil "~a" value)))
+  #-toml-test value)
