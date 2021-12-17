@@ -16,6 +16,10 @@
 
 (def-suite* clop.rules :in clop-tests:clop)
 
+(test comment
+  (is (null (parse 'rules::comment "# comment here")))
+  (is (null (parse 'rules::comment "#"))))
+
 (test value-int
   ;; Decimal.
   (is (= 99 (parse 'rules::value "+99")))
@@ -113,3 +117,16 @@ The quick brown \\
                (parse 'rules::value "'Tom \"Dubs\" Preston-Werner'")))
   (is (string= "I [dw]on't need \\d{2} apples"
                (parse 'rules::value "'''I [dw]on't need \\d{2} apples'''"))))
+
+(test value-array
+  (is (equal '(1 2 3)
+             (parse 'rules::value "[1,2,3]")))
+  (is (equal '()
+             (parse 'rules::value "[]")))
+  (is (equal '((1 2) ("a" "b" "c"))
+             (parse 'rules::value "[ [ 1, 2 ], [\"a\", \"b\", \"c\"] ]")))
+  (is (equal '(1 2 3)
+             (parse 'rules::value "[1, #comment
+2 #comment,
+, 3,
+]"))))

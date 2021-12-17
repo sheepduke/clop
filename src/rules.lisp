@@ -12,8 +12,16 @@
 
 (defrule toml value)
 
+(defrule comment (and #\# (* (not newline)))
+  (:constant nil))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                            Value                             ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defrule value
-    (or string
+    (or array
+        string
         boolean
         date-time
         float
@@ -259,7 +267,34 @@
 (defrule time-num-offset (and (or "+" "-") time-hour ":" time-minute))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;                            Basic                             ;;;;
+;;;;                            Array                             ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule array (and "[" (? array-values) (? array-omitted-content) "]")
+  (:destructure (left-bracket values comment right-bracket)
+    (declare (ignore left-bracket comment right-bracket))
+    values))
+
+(defrule array-values
+    (and (? array-omitted-content)
+         value
+         (* array-comma-element)
+         (? ","))
+  (:destructure (comment first rest comma)
+    (declare (ignore comment comma))
+    (cons first rest)))
+
+(defrule array-comma-element
+    (and (? array-omitted-content) "," (? array-omitted-content) value)
+  (:destructure (comment1 comma comment2 value)
+    (declare (ignore comment1 comma comment2))
+    value))
+
+(defrule array-omitted-content
+    (* (or whitespace (and (? comment) newline))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                            basic                             ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defrule alpha
