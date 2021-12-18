@@ -28,15 +28,24 @@
     (and "[" key "]"
          (* (or whitespace comment))
          newline
-         key-value-pair-list))
+         key-value-pair-list)
+  (:destructure (_1 table-name _2 _3 _4 key-value-pair-list)
+    (declare (ignore _1 _2 _3 _4))
+    (print table-name)
+    (print key-value-pair-list)))
 
 (defrule key-value-pair-list
     (and key-value-pair (* (or whitespace comment))
-         (* (and (+ newline) key-value-pair (* (or whitespace comment))))))
+         (* (and (+ newline) key-value-pair (* (or whitespace comment))))
+         (* newline))
+  (:destructure (pair _1 more-pairs _2)
+    (declare (ignore _1 _2))
+    (append (list pair)
+            (mapcar (lambda (match) (cadr match)) more-pairs))))
 
 (defrule key-value-pair (and key (* whitespace) "=" (* whitespace) value)
-  (:destructure (key whitespace equal-sign whitespace2 value)
-    (declare (ignore whitespace equal-sign whitespace2))
+  (:destructure (key _1 _2 _3 value)
+    (declare (ignore _1 _2 _3))
     (cons key value)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -55,11 +64,12 @@
 
 (defrule unquoted-key (+ (or alpha digit "-" "_")))
 
-(defrule dotted-key (and simple-key (+ (and "." simple-key)))
+(defrule dotted-key
+    (and simple-key (+ (and (* whitespace) "." (* whitespace) simple-key)))
   (:destructure (first rest)
     ;; Return keys as a list.
     (append (list first)
-            (mapcar (lambda (match) (cadr match)) rest))))
+            (mapcar (lambda (match) (cadddr match)) rest))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            Value                             ;;;;
@@ -191,8 +201,8 @@
 ;; Basic string.
 
 (defrule basic-string (and "\"" (* basic-char) "\"")
-  (:destructure (left-quote text right-quote)
-    (declare (ignore left-quote right-quote))
+  (:destructure (_1 text _2)
+    (declare (ignore _1 _2))
     text))
 
 (defrule basic-char (or escaped-char basic-unescaped-char))
@@ -221,8 +231,8 @@
 
 (defrule multiline-basic-string
     (and "\"\"\"" (? newline) multiline-basic-body "\"\"\"")
-  (:destructure (left-quote newline text right-quote)
-    (declare (ignore left-quote newline right-quote))
+  (:destructure (_1 _2 text _3)
+    (declare (ignore _1 _2 _3))
     text))
 
 (defrule multiline-basic-body
@@ -239,15 +249,15 @@
 ;; Literal string.
 
 (defrule literal-string (and "'" (* (not "'")) "'")
-  (:destructure (left-quote text right-quote)
-    (declare (ignore left-quote right-quote))
+  (:destructure (_1 text _2)
+    (declare (ignore _1 _2))
     text))
 
 ;; Literal multi-line string.
 
 (defrule multiline-literal-string (and "'''" (* (not "'''")) "'''")
-  (:destructure (left-quote text right-quote)
-    (declare (ignore left-quote right-quote))
+  (:destructure (_1 text _2)
+    (declare (ignore _1 _2))
     text))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -317,8 +327,8 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defrule array (and "[" (? array-values) (? array-omitted-content) "]")
-  (:destructure (left-bracket values comment right-bracket)
-    (declare (ignore left-bracket comment right-bracket))
+  (:destructure (_1 values _2 _3)
+    (declare (ignore _1 _2 _3))
     values))
 
 (defrule array-values
@@ -326,14 +336,14 @@
          value
          (* array-comma-element)
          (? ","))
-  (:destructure (comment first rest comma)
-    (declare (ignore comment comma))
+  (:destructure (_1 first rest _2)
+    (declare (ignore _1 _2))
     (cons first rest)))
 
 (defrule array-comma-element
     (and (? array-omitted-content) "," (? array-omitted-content) value)
-  (:destructure (comment1 comma comment2 value)
-    (declare (ignore comment1 comma comment2))
+  (:destructure (_1 _2 _3 value)
+    (declare (ignore _1 _2 _3))
     value))
 
 (defrule array-omitted-content
