@@ -10,10 +10,56 @@
 
 (in-package clop.rules)
 
-(defrule toml value)
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                             TOML                             ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule toml
+    (and (* (or whitespace comment newline))
+         (? (and key-value-pair-list newline))
+         (* (or whitespace comment newline))
+         named-table
+         (* (or whitespace comment newline))))
 
 (defrule comment (and #\# (* (not newline)))
   (:constant nil))
+
+(defrule named-table
+    (and "[" key "]"
+         (* (or whitespace comment))
+         newline
+         key-value-pair-list))
+
+(defrule key-value-pair-list
+    (and key-value-pair (* (or whitespace comment))
+         (* (and (+ newline) key-value-pair (* (or whitespace comment))))))
+
+(defrule key-value-pair (and key (* whitespace) "=" (* whitespace) value)
+  (:destructure (key whitespace equal-sign whitespace2 value)
+    (declare (ignore whitespace equal-sign whitespace2))
+    (cons key value)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                             Key                              ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule key (or dotted-key simple-key)
+  (:lambda (key)
+    ;; Return keys as a list.
+    (if (listp key) key (list key))))
+
+(defrule simple-key (or quoted-key unquoted-key)
+  (:text t))
+
+(defrule quoted-key (or basic-string literal-string))
+
+(defrule unquoted-key (+ (or alpha digit "-" "_")))
+
+(defrule dotted-key (and simple-key (+ (and "." simple-key)))
+  (:destructure (first rest)
+    ;; Return keys as a list.
+    (append (list first)
+            (mapcar (lambda (match) (cadr match)) rest))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            Value                             ;;;;
@@ -318,7 +364,7 @@
 
 (defrule whitespace (or #\space #\tab))
 
-(defrule newline (or #\newline (and #\return #\newline)))
+(defrule newline (and (? #\return) #\newline))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                          Functions                           ;;;;

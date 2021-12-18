@@ -20,6 +20,12 @@
   (is (null (parse 'rules::comment "# comment here")))
   (is (null (parse 'rules::comment "#"))))
 
+(test key
+  (is (equal '("s1mple-key_2")
+             (parse 'rules::key "s1mple-key_2")))
+  (is (equal '("animal" "dog" "name" "123")
+             (parse 'rules::key "animal.\"dog\".name.123"))))
+
 (test value-int
   ;; Decimal.
   (is (= 99 (parse 'rules::value "+99")))
@@ -130,3 +136,9 @@ The quick brown \\
 2 #comment,
 , 3,
 ]"))))
+
+(test key-value-pair
+  (is (equal '(("1") . 2)
+             (parse 'rules::key-value-pair "1 = 2")))
+  (is (equal '(("dog" "name") . "Bob")
+             (parse 'rules::key-value-pair "dog.name = \"Bob\""))))
