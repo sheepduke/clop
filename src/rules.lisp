@@ -6,33 +6,120 @@
   (:import-from #:alexandria
                 #:make-keyword
                 #:symbolicate)
-  (:export toml))
+  (:import-from #:serapeum
+                #:op
+                #:~>>)
+  (:export #:toml
+           #:toml-parse-error
+           #:message))
 
 (in-package clop.rules)
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                          Conditions                          ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(define-condition toml-parse-error (error)
+  ((message :initarg :message :initform "" :accessor message)))
+
+(define-condition toml-duplicated-key-error (toml-parse-error)
+  ((message :initarg :message :initform "" :accessor message)))
+
+(defmethod print-object ((err toml-parse-error) stream)
+  (format stream "Error during parsing TOML: ~&~a" (message err)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                          Data Model                          ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defclass key-value-pair ()
+  ((keys :type list :initarg :keys :accessor keys)
+   (value :accessor value :initarg :value)))
+
+(defclass table ()
+  ((pairs :type list :initarg :pairs :accessor pairs)))
+
+(defclass named-table (table)
+  ((names :type string :initarg :names :accessor names)))
+
+(defclass inline-table (table) ())
+
+(defclass array-table (named-table) ())
+
+(defmethod print-object ((obj key-value-pair) stream)
+  (format stream "#KeyValuePair(~a . ~a)"
+          (keys obj)
+          (value obj)))
+
+(defmethod print-object ((table named-table) stream)
+  (format stream "#NamedTable(~a . ~a)" (names table) (pairs table)))
+
+(defmethod print-object ((table inline-table) stream)
+  (format stream "#InlineTable(~a)" (pairs table)))
+
+(defmethod print-object ((table array-table) stream)
+  (format stream "#ArrayTable(~a . ~a)"
+          (names table)
+          (pairs table)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                             TOML                             ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defrule toml
-    (and (* (or whitespace comment newline))
-         (? (and key-value-pair-list newline))
-         (* (or whitespace comment newline))
-         named-table
-         (* (or whitespace comment newline))))
+    (and
+     (* (or whitespace comment newline))
+     (? (and key-value-pair-list))
+     (* (or whitespace comment newline))
+     (* (and (or named-table array-table) (* (or whitespace comment newline))))
+     (* (or whitespace comment newline)))
+  (:destructure (_1 root-pairs _2 named-tables _3)
+    (declare (ignore _1 _2 _3))
+    (append root-pairs
+            (mapcar (op (car _)) named-tables))))
 
 (defrule comment (and #\# (* (not newline)))
   (:constant nil))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                         Named Table                          ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defrule named-table
-    (and "[" key "]"
-         (* (or whitespace comment))
-         newline
-         key-value-pair-list)
-  (:destructure (_1 table-name _2 _3 _4 key-value-pair-list)
-    (declare (ignore _1 _2 _3 _4))
-    (print table-name)
-    (print key-value-pair-list)))
+    (and (and "[" (* whitespace))
+         key
+         (and (* whitespace) "]"
+              (* (or whitespace comment))
+              newline
+              (* (or whitespace comment newline)))
+         (? key-value-pair-list))
+  (:destructure (_1 names _2 key-value-pair-list)
+    (declare (ignore _1 _2))
+    (make-instance 'named-table
+                   :names names
+                   :pairs key-value-pair-list)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                         Array Table                          ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule array-table
+    (and (and "[[" (* whitespace))
+         key
+         (and (* whitespace) "]]"
+              (* (or whitespace comment))
+              newline
+              (* (or whitespace comment newline)))
+         (? key-value-pair-list))
+  (:destructure (_1 names _2 key-value-pair-list)
+    (declare (ignore _1 _2))
+    (make-instance 'array-table
+                   :names names
+                   :pairs key-value-pair-list)))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                        Key Value Pair                        ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defrule key-value-pair-list
     (and key-value-pair (* (or whitespace comment))
@@ -40,13 +127,30 @@
          (* newline))
   (:destructure (pair _1 more-pairs _2)
     (declare (ignore _1 _2))
+    ;; (let* ((pairs (append (list pair)
+    ;;                       (mapcar (op (cadr _)) more-pairs)))
+    ;;        (keys (mapcar (op (car _)) pairs))
+    ;;        (dup-keys (~>> pairs
+    ;;                       (mapcar (op (let ((key-list (car _1)))
+    ;;                                     (cons key-list
+    ;;                                           (count key-list keys
+    ;;                                                  :test #'equal)))))
+    ;;                       (remove-duplicates _ :test #'equal)
+    ;;                       (remove-if-not (op (> (cdr _) 1)))
+    ;;                       (mapcar (op (str:join "." (car _1)))))))
+    ;;   (unless (null dup-keys)
+    ;;     (error 'toml-duplicated-key-error
+    ;;            :message (format nil "Keys ~a are duplicated" dup-keys)))
+    ;;   pairs)
     (append (list pair)
-            (mapcar (lambda (match) (cadr match)) more-pairs))))
+            (mapcar (op (cadr _)) more-pairs))))
 
 (defrule key-value-pair (and key (* whitespace) "=" (* whitespace) value)
   (:destructure (key _1 _2 _3 value)
     (declare (ignore _1 _2 _3))
-    (cons key value)))
+    (make-instance 'key-value-pair
+                   :keys key
+                   :value value)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                             Key                              ;;;;
@@ -77,6 +181,7 @@
 
 (defrule value
     (or array
+        inline-table
         string
         boolean
         date-time
@@ -348,6 +453,25 @@
 
 (defrule array-omitted-content
     (* (or whitespace (and (? comment) newline))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                         Inline Table                         ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule inline-table
+    (and (and "{" (* whitespace))
+         (? inline-table-key-values)
+         (and (* whitespace) "}"))
+  (:destructure (_1 key-value-pairs _2)
+    (declare (ignore _1 _2))
+    (make-instance 'inline-table :pairs key-value-pairs)))
+
+(defrule inline-table-key-values
+    (and key-value-pair
+         (* (and (* whitespace) "," (* whitespace) key-value-pair)))
+  (:destructure (first-pair rest-matches)
+    (append (list first-pair)
+            (mapcar (op (cadddr _)) rest-matches))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            basic                             ;;;;

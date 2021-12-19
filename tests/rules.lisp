@@ -10,7 +10,9 @@
                 #:signals
                 #:is
                 #:def-suite*
-                #:test))
+                #:test)
+  (:import-from #:serapeum
+                #:op))
 
 (in-package clop-tests.rules)
 
@@ -138,18 +140,27 @@ The quick brown \\
              (parse 'rules::key "animal.\"dog\" . name.123"))))
 
 (test key-value-pair
-  (is (equal '(("1") . 2)
-             (parse 'rules::key-value-pair "1 = 2")))
-  (is (equal '(("dog" "name") . "Bob")
-             (parse 'rules::key-value-pair "dog.name = \"Bob\""))))
+  (let ((pair (parse 'rules::key-value-pair "1 = 2")))
+    (is (equal '("1") (rules::keys pair)))
+    (is (equal 2 (rules::value pair))))
+  (let ((pair (parse 'rules::key-value-pair "dog.name = \"Bob\"")))
+    (is (equal '("dog" "name") (rules::keys pair)))
+    (is (equal "Bob" (rules::value pair)))))
 
 (test key-value-pair-list
-  (is (equal '((("fish" "age") . 7)
-               (("cat" "name") . "Alice")
-               (("dog" "name") . "Bob"))
-             (parse 'rules::key-value-pair-list "fish.age  =7
+  (let ((pairs (parse 'rules::key-value-pair-list "fish.age  =7
 cat.name = \"Alice\" # Test comment here.
 
 dog . name=   \"\"\"
 Bob\"\"\"
-"))))
+")))
+    (is (equal '(("fish" "age") . 7)
+               (cons (rules::keys (car pairs))
+                     (rules::value (car pairs)))))
+    (is (equal '(("cat" "name") . "Alice")
+               (cons (rules::keys (cadr pairs))
+                     (rules::value (cadr pairs)))))
+    (is (equal '(("dog" "name") . "Bob")
+               (cons (rules::keys (caddr pairs))
+                     (rules::value (caddr pairs)))))))
+
