@@ -163,7 +163,3 @@ Bob\"\"\"
     (is (equal '(("dog" "name") . "Bob")
                (cons (rules::keys (caddr pairs))
                      (rules::value (caddr pairs)))))))
-
-;; (parse 'rules::toml
-;;        (alexandria:read-file-into-string
-;;         #P"/home/sheep/temp/silver-brain/config.toml"))

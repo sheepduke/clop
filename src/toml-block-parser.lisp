@@ -8,8 +8,11 @@
   (:import-from #:alexandria
                 #:hash-table-alist
                 #:appendf)
-  (:export
-   #:parse-toml-blocks))
+  (:export #:parse-toml-blocks
+           #:children
+           #:table
+           #:inline-table
+           #:table-array))
 
 (in-package clop.toml-block-parser)
 
@@ -17,21 +20,29 @@
 ;;;;                          Data Model                          ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defclass item () ())
-
-(defclass table (item)
+(defclass collection ()
   ((children :accessor children
              :initform (make-hash-table :test #'equal)
-             :documentation "The child elements of this table. It might be ")
-   (parent :reader parent
-           :initarg :parent
-           :initform nil
-           :documentation "Back reference to its parent table. For root table,
-this slot is NIL.")))
+             :documentation "The child elements of this table. It might be ")))
 
-(defclass inline-table (table) ())
+(defclass table (collection)
+  ((definition-context :type boolean
+                       :accessor definition-context
+                       :initarg :definition-context
+                       :initform nil
+                       :documentation "Indicates if the table is defined or not.
+A table is defined in the following ways:
+1. By [Table] header.
+2. By being a path of dotted.key.tables. In this case, all the tables along the
+way are created and defined.
 
-(defclass table-array (table)
+Its value can be:
+- T means defined via [Table] header.
+- A table instance means defined under corresponding table section.")))
+
+(defclass inline-table (collection) ())
+
+(defclass table-array (collection)
   ((children :initform (list))))
 
 (defmethod print-object ((table table) stream)
@@ -43,7 +54,7 @@ this slot is NIL.")))
           (hash-table-alist (children table))))
 
 (defmethod print-object ((table table-array) stream)
-  (format stream "#ArrayTable(~{~S~})"
+  (format stream "#ArrayTable(~{ ~S ~})"
           (children table)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -51,15 +62,37 @@ this slot is NIL.")))
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (define-condition toml-parse-error (error)
-  ((message :initarg :message :initform "" :accessor message)))
+  ((names :accessor names :initarg :names)))
 
-(define-condition toml-duplicated-table-error (toml-parse-error) ())
+(define-condition toml-redefine-table-error (toml-parse-error) ()
+  (:report (lambda (condition stream)
+             (format stream
+                     "Table name ~a is already defined"
+                     (names condition)))))
 
-(define-condition toml-duplicated-key-error (toml-parse-error)
-  ((message :initarg :message :initform "" :accessor message)))
+(define-condition toml-redefine-property-error (toml-parse-error) ()
+  (:report (lambda (condition stream)
+             (format stream
+                     "Property name ~a is already defined"
+                     (names condition)))))
 
-(defmethod print-object ((err toml-parse-error) stream)
-  (format stream "Error during parsing TOML: ~&~a" (message err)))
+(define-condition toml-modify-inline-table-error (toml-parse-error) ()
+  (:report (lambda (condition stream)
+             (format stream
+                     "Inline table ~a cannot be modified once defined"
+                     (names condition)))))
+
+(define-condition toml-dotted-key-redefine-table-error (toml-parse-error) ()
+  (:report (lambda (condition stream)
+             (format stream
+                     "Dotted key ~a cannot redefine table defined by [Table] header or dotted key from another section"
+                     (names condition)))))
+
+(define-condition toml-dotted-key-open-table-array-error (toml-parse-error) ()
+  (:report (lambda (condition stream)
+             (format stream
+                     "Dotted key ~a cannot open table array"
+                     (names condition)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            Parser                            ;;;;
@@ -68,10 +101,7 @@ this slot is NIL.")))
 (defclass parser-context ()
   ((root-table :reader root-table
                :initform (make-instance 'table))
-   (current-table :accessor current-table :initform nil)
-   (tables-definitions :type hash-table
-                       :accessor table-definitions
-                       :initform (make-hash-table))))
+   (current-table :accessor current-table :initform nil)))
 
 (defun parse-toml-blocks (list)
   "Given a LIST of components (tables or key-value pairs), return an alist."
@@ -82,54 +112,122 @@ this slot is NIL.")))
 
 (defgeneric parse-toml-block (toml-block context))
 
-(defmethod parse-toml-block ((pair toml-key-value-pair) context)
-  (print "Invoked kv pair"))
-
 (defmethod parse-toml-block ((toml-table toml-named-table) context)
-  (let* ((names (toml-block:names toml-table)))
-    (loop with current-table = (current-table context)
-          with names-to-check = (butlast names)
-          for name in names-to-check
-          for table = (gethash name (children current-table))
-          do (cond
-               ((null table) (return current-table))
-               ((typep table 'inline-table)
-                (error 'toml-parse-error
-                       :message (format nil
-                                        "Inline table ~a cannot be modified"
-                                        names)))
-               (t (setf current-table table))))))
-
-(defmethod parse-toml-block ((table toml-inline-table) context)
-  (print "Invoked inline table"))
-
-(defmethod parse-toml-block ((table toml-array-table) context)
-  (print "Invoked array table"))
-
-(defun define-new-table (names context)
-  )
-
-;; (loop with remaining-list = '(1 2 3 4)
-;;       for first = (first remaining-list)
-;;       for rest = (rest remaining-list)
-;;       do (if (null rest)
-;;              (print "last one found!"))
-;;          (setf remaining-list rest))
-
-(defun make-table-chain (first-table names)
-  "Create a chain of tables specified by NAMES. The tables in path is
-marked :created state, and the real (last) table is marked :defined."
-  (loop with current-table = first-table
+  (loop with names = (toml-block:names toml-table)
+        with length = (length names)
+        with current-table = (root-table context)
         for name in names
-        for table = (make-instance 'table)
-        do (setf (gethash name (children current-table)) table)
-           (setf current-table table)
-        finally (return current-table)))
+        for i from 1
+        for last-name-p = (= i length)
+        for table = (get-child current-table name)
+        if (null table)
+          do (let ((table (make-instance 'table)))
+               (when last-name-p
+                 (setf (definition-context table) t))
+               (setf (current-table context) table)
+               (set-child current-table name table))
+        else
+          do (case (type-of table)
+               (table (if last-name-p
+                          (error 'toml-redefine-table-error :names names)
+                          (setf current-table table)))
+               (table-array (setf current-table (last-child table)))
+               (t (error 'toml-redefine-table-error :names names)))))
 
-(defun add-child-table (table child-table)
-  (setf (children table)
-        (append (children table) (list child-table))))
+(defmethod parse-toml-block ((toml-table toml-array-table) context)
+  (loop with names = (toml-block:names toml-table)
+        with length = (length names)
+        with current-table = (root-table context)
+        for name in names
+        for i from 1
+        for last-name-p = (= i length)
+        for table = (get-child current-table name)
+        if (null table)
+          do (if last-name-p
+                 ;; For last part of names, create table array.
+                 (let ((table (make-instance 'table))
+                       (table-array (make-instance 'table-array)))
+                   (set-child current-table name table-array)
+                   (append-child table-array table)
+                   (setf (current-table context) table))
+                 ;; For middle part of names, create normal table.
+                 (let ((table (make-instance 'table)))
+                   (set-child current-table name table)
+                   (setf current-table table)))
+        else
+          do (case (type-of table)
+               (table (if last-name-p
+                          (error 'toml-redefine-table-error :names names)
+                          (setf current-table table)))
+               (table-array (if last-name-p
+                                (append-child table (make-instance 'table))
+                                (setf current-table (last-child table))))
+               (t (error 'toml-redefine-table-error :names names)))))
 
-(esrap:parse 'clop.rules::toml
-             (alexandria:read-file-into-string
-              #P"/home/sheep/temp/silver-brain/config.toml"))
+(defmethod parse-toml-block ((pair toml-key-value-pair) context)
+  (let* ((current-table (current-table context))
+         (table current-table)
+        key-to-add value-to-add)
+    ;; Parse keys.
+    (loop with keys = (toml-block:keys pair)
+          with length = (length keys)
+          for key in keys
+          for i from 1
+          for last-name-p = (= i length)
+          for value = (get-child table key)
+          if (null value)
+            do (if last-name-p
+                   (setf key-to-add key)
+                   (let ((new-table (make-instance
+                                     'table
+                                     :definition-context
+                                     current-table)))
+                     (set-child table key new-table)
+                     (setf table new-table)))
+          else
+            do (if last-name-p
+                   (error 'toml-redefine-property-error :names keys)
+                   (case (type-of value)
+                     (table (if (equal (definition-context value)
+                                       current-table)
+                                (setf table value)
+                                (error 'toml-dotted-key-redefine-table-error
+                                       :names keys)))
+                     (inline-table (error 'toml-modify-inline-table-error
+                                          :names keys))
+                     (table-array (error 'toml-dotted-key-open-table-array-error
+                                         :names keys))
+                     (t (error 'toml-redefine-property-error
+                               :names keys)))))
+    ;; Parse value.
+    (let ((value (toml-block:value pair)))
+      (if (typep value 'toml-block:toml-inline-table)
+          (let ((inline-table (make-instance 'inline-table)))
+            (setf (current-table context) inline-table)
+            (setf value-to-add inline-table)
+            (parse-toml-block value context)
+            (setf (current-table context) current-table))
+          (setf value-to-add value)))
+
+    ;; Add key and value.
+    (set-child table key-to-add value-to-add)))
+
+(defmethod parse-toml-block ((toml-table toml-inline-table) context)
+  (loop for pair in (toml-block:pairs toml-table)
+        do (parse-toml-block pair context)))
+
+(defun append-child (table-array table)
+  "Append TABLE as a child to TABLE-ARRAY."
+  (appendf (children table-array) (list table)))
+
+(defun last-child (table-array)
+  "Get the last child of TABLE-ARRAY."
+  (first (last (children table-array))))
+
+(defun set-child (table name value)
+  "Set the child of TABLE specified by NAME to VALUE."
+  (setf (gethash name (children table)) value))
+
+(defun get-child (table name)
+  "Get the child of TABLE specified by NAME."
+  (gethash name (children table)))
