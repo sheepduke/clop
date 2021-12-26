@@ -163,4 +163,3 @@ Bob\"\"\"
     (is (equal '(("dog" "name") . "Bob")
                (cons (rules::keys (caddr pairs))
                      (rules::value (caddr pairs)))))))
-

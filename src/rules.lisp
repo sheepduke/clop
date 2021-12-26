@@ -1,154 +1,75 @@
 (defpackage clop.rules
   (:use #:cl
-        #:esrap)
+        #:esrap
+        #:clop.toml-block)
   (:local-nicknames (#:config #:clop.config)
-                    (#:time #:local-time))
+                    (#:time #:local-time)
+                    (#:block-parser #:clop.toml-block-parser))
   (:import-from #:alexandria
+                #:compose
+                #:assoc-value
                 #:make-keyword
                 #:symbolicate)
   (:import-from #:serapeum
+                #:flip
                 #:op
                 #:~>>)
-  (:export #:toml
-           #:toml-parse-error
-           #:message))
+  (:export #:toml))
 
 (in-package clop.rules)
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;                          Conditions                          ;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define-condition toml-parse-error (error)
-  ((message :initarg :message :initform "" :accessor message)))
-
-(define-condition toml-duplicated-key-error (toml-parse-error)
-  ((message :initarg :message :initform "" :accessor message)))
-
-(defmethod print-object ((err toml-parse-error) stream)
-  (format stream "Error during parsing TOML: ~&~a" (message err)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;                          Data Model                          ;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(defclass key-value-pair ()
-  ((keys :type list :initarg :keys :accessor keys)
-   (value :accessor value :initarg :value)))
-
-(defclass table ()
-  ((pairs :type list :initarg :pairs :accessor pairs)))
-
-(defclass named-table (table)
-  ((names :type string :initarg :names :accessor names)))
-
-(defclass inline-table (table) ())
-
-(defclass array-table (named-table) ())
-
-(defmethod print-object ((obj key-value-pair) stream)
-  (format stream "#KeyValuePair(~a . ~a)"
-          (keys obj)
-          (value obj)))
-
-(defmethod print-object ((table named-table) stream)
-  (format stream "#NamedTable(~a . ~a)" (names table) (pairs table)))
-
-(defmethod print-object ((table inline-table) stream)
-  (format stream "#InlineTable(~a)" (pairs table)))
-
-(defmethod print-object ((table array-table) stream)
-  (format stream "#ArrayTable(~a . ~a)"
-          (names table)
-          (pairs table)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                             TOML                             ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defrule toml
-    (and
-     (* (or whitespace comment newline))
-     (? (and key-value-pair-list))
-     (* (or whitespace comment newline))
-     (* (and (or named-table array-table) (* (or whitespace comment newline))))
-     (* (or whitespace comment newline)))
-  (:destructure (_1 root-pairs _2 named-tables _3)
-    (declare (ignore _1 _2 _3))
-    (append root-pairs
-            (mapcar (op (car _)) named-tables))))
+    (and (* (or whitespace comment newline))
+         (* (and toml-block newline
+                 (* (or whitespace comment newline))))
+         (? (and toml-block)))
+  (:destructure (_1 definitions optional-last-block)
+    (declare (ignore _1))
+    (~>> (append (mapcar (op (car _)) definitions)
+                 optional-last-block)
+         (block-parser:parse-toml-blocks))))
+
+(defrule toml-block (or key-value-pair table))
 
 (defrule comment (and #\# (* (not newline)))
   (:constant nil))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;                         Named Table                          ;;;;
+;;;;                            Table                             ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defrule table (or named-table array-table))
 
 (defrule named-table
     (and (and "[" (* whitespace))
          key
-         (and (* whitespace) "]"
-              (* (or whitespace comment))
-              newline
-              (* (or whitespace comment newline)))
-         (? key-value-pair-list))
-  (:destructure (_1 names _2 key-value-pair-list)
+         (and (* whitespace) "]"))
+  (:destructure (_1 names _2)
     (declare (ignore _1 _2))
-    (make-instance 'named-table
-                   :names names
-                   :pairs key-value-pair-list)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;                         Array Table                          ;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+    (make-instance 'toml-named-table
+                   :names names)))
 
 (defrule array-table
     (and (and "[[" (* whitespace))
          key
-         (and (* whitespace) "]]"
-              (* (or whitespace comment))
-              newline
-              (* (or whitespace comment newline)))
-         (? key-value-pair-list))
-  (:destructure (_1 names _2 key-value-pair-list)
+         (and (* whitespace) "]]"))
+  (:destructure (_1 names _2)
     (declare (ignore _1 _2))
-    (make-instance 'array-table
-                   :names names
-                   :pairs key-value-pair-list)))
+    (make-instance 'toml-array-table
+                   :names names)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                        Key Value Pair                        ;;;;
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
-(defrule key-value-pair-list
-    (and key-value-pair (* (or whitespace comment))
-         (* (and (+ newline) key-value-pair (* (or whitespace comment))))
-         (* newline))
-  (:destructure (pair _1 more-pairs _2)
-    (declare (ignore _1 _2))
-    ;; (let* ((pairs (append (list pair)
-    ;;                       (mapcar (op (cadr _)) more-pairs)))
-    ;;        (keys (mapcar (op (car _)) pairs))
-    ;;        (dup-keys (~>> pairs
-    ;;                       (mapcar (op (let ((key-list (car _1)))
-    ;;                                     (cons key-list
-    ;;                                           (count key-list keys
-    ;;                                                  :test #'equal)))))
-    ;;                       (remove-duplicates _ :test #'equal)
-    ;;                       (remove-if-not (op (> (cdr _) 1)))
-    ;;                       (mapcar (op (str:join "." (car _1)))))))
-    ;;   (unless (null dup-keys)
-    ;;     (error 'toml-duplicated-key-error
-    ;;            :message (format nil "Keys ~a are duplicated" dup-keys)))
-    ;;   pairs)
-    (append (list pair)
-            (mapcar (op (cadr _)) more-pairs))))
-
 (defrule key-value-pair (and key (* whitespace) "=" (* whitespace) value)
   (:destructure (key _1 _2 _3 value)
     (declare (ignore _1 _2 _3))
-    (make-instance 'key-value-pair
+    (make-instance 'toml-key-value-pair
                    :keys key
                    :value value)))
 
@@ -173,7 +94,7 @@
   (:destructure (first rest)
     ;; Return keys as a list.
     (append (list first)
-            (mapcar (lambda (match) (cadddr match)) rest))))
+            (mapcar (op (cadddr _)) rest))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            Value                             ;;;;
@@ -197,7 +118,7 @@
         oct-int
         bin-int
         decimal-int)
-  (:lambda (value) (value-or-alist :integer value)))
+  (:lambda (value) (make-return-value :integer value)))
 
 ;; Decimal.
 (defrule decimal-int
@@ -252,7 +173,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defrule float (or float-special float-normal)
-  (:lambda (value) (value-or-alist :float value)))
+  (:lambda (value) (make-return-value :float value)))
 
 ;; Normal values.
 (defrule float-normal
@@ -289,7 +210,7 @@
     (let ((value (if (string= "true" text)
                      config:*value-true*
                      config:*value-false*)))
-      (value-or-alist :bool value))))
+      (make-return-value :bool value))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            String                            ;;;;
@@ -301,7 +222,7 @@
         multiline-literal-string
         literal-string)
   (:text t)
-  (:lambda (value) (value-or-alist :string value)))
+  (:lambda (value) (make-return-value :string value)))
 
 ;; Basic string.
 
@@ -380,25 +301,25 @@
   (:lambda (text)
     (let ((value (funcall #'time:parse-timestring
                           (str:replace-first " " "T" text))))
-      (value-or-alist :datetime value))))
+      (make-return-value :datetime value))))
 
 (defrule local-date-time (and full-date date-time-delimeter partial-time)
   (:text t)
   (:lambda (text)
     (let ((value (funcall config:*local-date-time-parser* text)))
-      (value-or-alist :datetime-local value))))
+      (make-return-value :datetime-local value))))
 
 (defrule local-date full-date
   (:text t)
   (:lambda (text)
     (let ((value (funcall config:*local-date-parser* text)))
-      (value-or-alist :date-local value))))
+      (make-return-value :date-local value))))
 
 (defrule local-time partial-time
   (:text t)
   (:lambda (text)
     (let ((value (funcall config:*local-time-parser* text)))
-      (value-or-alist :time-local value))))
+      (make-return-value :time-local value))))
 
 (defrule full-date (and date-year "-" date-month "-" date-day))
 
@@ -464,7 +385,7 @@
          (and (* whitespace) "}"))
   (:destructure (_1 key-value-pairs _2)
     (declare (ignore _1 _2))
-    (make-instance 'inline-table :pairs key-value-pairs)))
+    (make-instance 'toml-inline-table :pairs key-value-pairs)))
 
 (defrule inline-table-key-values
     (and key-value-pair
@@ -510,8 +431,9 @@
                              :radix radix
                              :start start))
 
-(defun value-or-alist (type value)
+(defun make-return-value (type value)
   (declare (ignorable type))
-  #+toml-test (list (cons :type (string-downcase type))
-                    (cons :value (format nil "~a" value)))
+  #+toml-test (jsown:new-js
+                ("type" (string-downcase type))
+                ("value" (format nil "\"~a\"" value)))
   #-toml-test value)

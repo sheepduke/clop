@@ -4,6 +4,7 @@
   :license "MIT"
   :author "YUE Daian"
   :depends-on (#:alexandria
+               #:serapeum
                #:esrap
                #:parse-number
                #:local-time
@@ -13,6 +14,8 @@
                 :components
                 ((:file "util")
                  (:file "config")
+                 (:file "toml-block")
+                 (:file "toml-block-parser")
                  (:file "rules")
                  (:file "clop"))))
   :in-order-to ((test-op (test-op :clop-tests))))
