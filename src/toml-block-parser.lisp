@@ -10,7 +10,14 @@
            #:children
            #:table
            #:inline-table
-           #:table-array))
+           #:table-array
+           #:toml-parse-error
+           #:names
+           #:toml-redefine-table-error
+           #:toml-redefine-property-error
+           #:toml-modify-inline-table-error
+           #:toml-dotted-key-redefine-table-error
+           #:toml-dotted-key-open-table-array-error))
 
 (in-package clop.toml-block-parser)
 

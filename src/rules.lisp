@@ -20,7 +20,9 @@
 
 (defrule toml
     (and (* (or whitespace comment newline))
-         (* (and toml-block newline
+         (* (and toml-block
+                 (* (or whitespace comment))
+                 newline
                  (* (or whitespace comment newline))))
          (? (and toml-block)))
   (:destructure (_1 definitions optional-last-block)
@@ -114,7 +116,7 @@
         oct-int
         bin-int
         decimal-int)
-  (:lambda (value) (make-return-value :integer value)))
+  (:lambda (value) (parse-value :integer value)))
 
 ;; Decimal.
 (defrule decimal-int
@@ -169,7 +171,7 @@
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 
 (defrule float (or float-special float-normal)
-  (:lambda (value) (make-return-value :float value)))
+  (:lambda (value) (parse-value :float value)))
 
 ;; Normal values.
 (defrule float-normal
@@ -206,7 +208,7 @@
     (let ((value (if (string= "true" text)
                      config:*value-true*
                      config:*value-false*)))
-      (make-return-value :bool value))))
+      (parse-value :bool value))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            String                            ;;;;
@@ -218,7 +220,7 @@
         multiline-literal-string
         literal-string)
   (:text t)
-  (:lambda (value) (make-return-value :string value)))
+  (:lambda (value) (parse-value :string value)))
 
 ;; Basic string.
 
@@ -277,9 +279,13 @@
 
 ;; Literal multi-line string.
 
-(defrule multiline-literal-string (and "'''" (* (not "'''")) "'''")
-  (:destructure (_1 text _2)
-    (declare (ignore _1 _2))
+(defrule multiline-literal-string
+    (and "'''"
+         (? newline)
+         (* (not "'''"))
+         "'''")
+  (:destructure (_1 _2 text _3)
+    (declare (ignore _1 _2 _3))
     text))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -294,28 +300,19 @@
 
 (defrule offset-date-time (and full-date date-time-delimeter full-time)
   (:text t)
-  (:lambda (text)
-    (let ((value (funcall #'time:parse-timestring
-                          (str:replace-first " " "T" text))))
-      (make-return-value :datetime value))))
+  (:lambda (text) (parse-value :datetime text)))
 
 (defrule local-date-time (and full-date date-time-delimeter partial-time)
   (:text t)
-  (:lambda (text)
-    (let ((value (funcall config:*local-date-time-parser* text)))
-      (make-return-value :datetime-local value))))
+  (:lambda (text) (parse-value :datetime-local text)))
 
 (defrule local-date full-date
   (:text t)
-  (:lambda (text)
-    (let ((value (funcall config:*local-date-parser* text)))
-      (make-return-value :date-local value))))
+  (:lambda (text) (parse-value :date-local text)))
 
 (defrule local-time partial-time
   (:text t)
-  (:lambda (text)
-    (let ((value (funcall config:*local-time-parser* text)))
-      (make-return-value :time-local value))))
+  (:lambda (text) (parse-value :time-local text)))
 
 (defrule full-date (and date-year "-" date-month "-" date-day))
 
@@ -330,7 +327,7 @@
 
 (defrule date-day (and digit digit))
 
-(defrule date-time-delimeter (or "T" " "))
+(defrule date-time-delimeter (or "t" "T" " "))
 
 (defrule time-hour (and digit digit))
 
@@ -340,7 +337,7 @@
 
 (defrule time-second-fraction (and "." (+ digit)))
 
-(defrule time-offset (or "Z" time-num-offset))
+(defrule time-offset (or "z" "Z" time-num-offset))
 
 (defrule time-num-offset (and (or "+" "-") time-hour ":" time-minute))
 
@@ -427,6 +424,5 @@
                              :radix radix
                              :start start))
 
-(defun make-return-value (type value)
-  (declare (ignorable type))
-  (funcall config:*value-parser* type value))
+(defun parse-value (type text)
+  (funcall config:*value-parser* type text))
