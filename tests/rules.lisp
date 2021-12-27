@@ -146,20 +146,3 @@ The quick brown \\
   (let ((pair (parse 'rules::key-value-pair "dog.name = \"Bob\"")))
     (is (equal '("dog" "name") (rules::keys pair)))
     (is (equal "Bob" (rules::value pair)))))
-
-(test key-value-pair-list
-  (let ((pairs (parse 'rules::key-value-pair-list "fish.age  =7
-cat.name = \"Alice\" # Test comment here.
-
-dog . name=   \"\"\"
-Bob\"\"\"
-")))
-    (is (equal '(("fish" "age") . 7)
-               (cons (rules::keys (car pairs))
-                     (rules::value (car pairs)))))
-    (is (equal '(("cat" "name") . "Alice")
-               (cons (rules::keys (cadr pairs))
-                     (rules::value (cadr pairs)))))
-    (is (equal '(("dog" "name") . "Bob")
-               (cons (rules::keys (caddr pairs))
-                     (rules::value (caddr pairs)))))))
