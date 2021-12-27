@@ -4,7 +4,6 @@
   :license "MIT"
   :author "YUE Daian"
   :depends-on (#:alexandria
-               #:serapeum
                #:esrap
                #:parse-number
                #:local-time

@@ -2,13 +2,11 @@
   (:use #:cl
         #:clop.toml-block)
   (:local-nicknames (#:toml-block #:clop.toml-block))
-  (:import-from #:serapeum
-                #:~>>
-                #:op)
   (:import-from #:alexandria
                 #:hash-table-alist
                 #:appendf)
   (:export #:parse-toml-blocks
+           #:collection
            #:children
            #:table
            #:inline-table
@@ -107,7 +105,7 @@ Its value can be:
   "Given a LIST of components (tables or key-value pairs), return an alist."
   (let ((context (make-instance 'parser-context)))
     (setf (current-table context) (root-table context))
-    (mapc (op (parse-toml-block _ context)) list)
+    (mapc (lambda (toml-block) (parse-toml-block toml-block context)) list)
     (root-table context)))  
 
 (defgeneric parse-toml-block (toml-block context))

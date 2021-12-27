@@ -10,10 +10,6 @@
                 #:assoc-value
                 #:make-keyword
                 #:symbolicate)
-  (:import-from #:serapeum
-                #:flip
-                #:op
-                #:~>>)
   (:export #:toml))
 
 (in-package clop.rules)
@@ -29,9 +25,10 @@
          (? (and toml-block)))
   (:destructure (_1 definitions optional-last-block)
     (declare (ignore _1))
-    (~>> (append (mapcar (op (car _)) definitions)
-                 optional-last-block)
-         (block-parser:parse-toml-blocks))))
+    (let ((toml-blocks (append (mapcar (lambda (definition) (car definition))
+                                       definitions)
+                               optional-last-block)))
+      (block-parser:parse-toml-blocks toml-blocks))))
 
 (defrule toml-block (or key-value-pair table))
 
@@ -93,8 +90,7 @@
     (and simple-key (+ (and (* whitespace) "." (* whitespace) simple-key)))
   (:destructure (first rest)
     ;; Return keys as a list.
-    (append (list first)
-            (mapcar (op (cadddr _)) rest))))
+    (append (list first) (mapcar (lambda (it) (fourth it)) rest))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            Value                             ;;;;
@@ -392,7 +388,7 @@
          (* (and (* whitespace) "," (* whitespace) key-value-pair)))
   (:destructure (first-pair rest-matches)
     (append (list first-pair)
-            (mapcar (op (cadddr _)) rest-matches))))
+            (mapcar (lambda (it) (fourth it)) rest-matches))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            basic                             ;;;;
@@ -433,7 +429,4 @@
 
 (defun make-return-value (type value)
   (declare (ignorable type))
-  #+toml-test (jsown:new-js
-                ("type" (string-downcase type))
-                ("value" (format nil "\"~a\"" value)))
-  #-toml-test value)
+  (funcall config:*value-parser* type value))

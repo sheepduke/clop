@@ -9,7 +9,8 @@
            #:*value--nan*
            #:*local-date-time-parser*
            #:*local-date-parser*
-           #:*local-time-parser*))
+           #:*local-time-parser*
+           #:*value-parser*))
 
 (in-package clop.config)
 
@@ -30,6 +31,9 @@
 
 (defvar *value-false* nil
   "The value of false when decoding TOML.")
+
+(defvar *value-parser*
+  (lambda (type value) value))
 
 (defvar *local-date-time-parser* #'util:parse-local-date-time
   "Function for parsing local date time of YYYY-MM-DDTHH:mm:ss etc etc.
