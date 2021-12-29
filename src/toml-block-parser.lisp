@@ -1,5 +1,6 @@
 (defpackage clop.toml-block-parser
   (:use #:cl
+        #:clop.conditions
         #:clop.toml-block)
   (:local-nicknames (#:toml-block #:clop.toml-block))
   (:import-from #:alexandria
@@ -10,14 +11,7 @@
            #:children
            #:table
            #:inline-table
-           #:table-array
-           #:toml-parse-error
-           #:names
-           #:toml-redefine-table-error
-           #:toml-redefine-property-error
-           #:toml-modify-inline-table-error
-           #:toml-dotted-key-redefine-table-error
-           #:toml-dotted-key-open-table-array-error))
+           #:table-array))
 
 (in-package clop.toml-block-parser)
 
@@ -61,43 +55,6 @@ Its value can be:
 (defmethod print-object ((table table-array) stream)
   (format stream "#ArrayTable(~{ ~S ~})"
           (children table)))
-
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-;;;;                          Conditions                          ;;;;
-;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
-
-(define-condition toml-parse-error (error)
-  ((names :accessor names :initarg :names)))
-
-(define-condition toml-redefine-table-error (toml-parse-error) ()
-  (:report (lambda (condition stream)
-             (format stream
-                     "Table name ~a is already defined"
-                     (names condition)))))
-
-(define-condition toml-redefine-property-error (toml-parse-error) ()
-  (:report (lambda (condition stream)
-             (format stream
-                     "Property name ~a is already defined"
-                     (names condition)))))
-
-(define-condition toml-modify-inline-table-error (toml-parse-error) ()
-  (:report (lambda (condition stream)
-             (format stream
-                     "Inline table ~a cannot be modified once defined"
-                     (names condition)))))
-
-(define-condition toml-dotted-key-redefine-table-error (toml-parse-error) ()
-  (:report (lambda (condition stream)
-             (format stream
-                     "Dotted key ~a cannot redefine table defined by [Table] header or dotted key from another section"
-                     (names condition)))))
-
-(define-condition toml-dotted-key-open-table-array-error (toml-parse-error) ()
-  (:report (lambda (condition stream)
-             (format stream
-                     "Dotted key ~a cannot open table array"
-                     (names condition)))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            Parser                            ;;;;

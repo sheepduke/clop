@@ -21,12 +21,17 @@ exec ros -Q -- $0 "$@"
                  value
                  (format nil "~a" value)))))
 
+(defun parse-value (type value)
+  (when (member type '(:datetime :datetime-local :date-local :time-local))
+    (local-time:parse-timestring (str:replace-first " " "T" value)))
+  (make-typed-value type value))
+
 (defun main (&rest argv)
   (declare (ignorable argv))
   (let* ((clop.config:*value-true* "true")
          (clop.config:*value-false* "false")
          (clop.config:*value-parser* (lambda (type value)
-                                (make-typed-value type value)))
+                                       (parse-value type value)))
          (lines (loop for line = (read-line *standard-input* nil nil)
                       until (null line)
                       collect line))

@@ -1,7 +1,8 @@
 (defpackage clop.rules
   (:use #:cl
         #:esrap
-        #:clop.toml-block)
+        #:clop.toml-block
+        #:clop.conditions)
   (:local-nicknames (#:config #:clop.config)
                     (#:time #:local-time)
                     (#:block-parser #:clop.toml-block-parser))
@@ -229,27 +230,56 @@
     (declare (ignore _1 _2))
     text))
 
-(defrule basic-char (or escaped-char basic-unescaped-char))
+(defrule basic-char
+    (or escaped-char
+        (basic-unescaped-char-p character)))
 
 (defrule escaped-char
     (and "\\" (or (and "u" (string 4))
                   (and "U" (string 8))
-                  "b" "t" "r" "n" "f" "\"" "\\"))
+                  character))
   (:text t)
   (:lambda (text)
-    (string
-     (case (elt text 1)
-       (#\b #\backspace)
-       (#\t #\tab)
-       (#\r #\return)
-       (#\n #\newline)
-       (#\f #\page)
-       (#\" #\")
-       (#\\ #\\)
-       (#\u (code-char (parse-integer (subseq text 2) :radix 16)))
-       (#\U (code-char (parse-integer (subseq text 2) :radix 16)))))))
+    (labels ((parse-unicode (text)
+               (or (every #'hexp text)
+                   (error 'toml-invalid-unicode-error :text text))
+               (code-char (parse-integer text :radix 16))))
+      (string
+       (case (elt text 1)
+         (#\b #\backspace)
+         (#\t #\tab)
+         (#\r #\return)
+         (#\n #\newline)
+         (#\f #\page)
+         (#\" #\")
+         (#\\ #\\)
+         (#\u (parse-unicode (subseq text 2)))
+         (#\U (parse-unicode (subseq text 2)))
+         (t (error 'toml-invalid-text-error :text text)))))))
 
-(defrule basic-unescaped-char (not "\""))
+(defun escaped-char-p (char)
+  (case char
+    (#\b #\backspace)
+    (#\t #\tab)
+    (#\r #\return)
+    (#\n #\newline)
+    (#\f #\page)
+    (#\" #\")
+    (#\\ #\\)
+    (t (error 'toml-invalid-char-error :char (format nil "\\~a" char)))))
+
+(defun escaped-short-unicode-p (unicode)
+  (or (every #'hexp unicode)
+      (error 'toml-invalid-unicode-error :unicode unicode))
+  (code-char (parse-integer unicode :radix 16)))
+
+(defun basic-unescaped-char-p (char)
+  (let ((code (char-code char)))
+    (or (char= char #\space)
+        (char= char #\tab)
+        (= code #x21)
+        (<= #x23 code #x5b)
+        (<= #x5d code #x7e))))
 
 ;; Multi-line string.
 
@@ -401,10 +431,12 @@
 (defrule digit-string
     (and digit (* (and optional-underscore digit))))
 
-(defrule hex
-    (or digit
-        (character-ranges (#\a #\f))
-        (character-ranges (#\A #\F))))
+(defrule hex (hexp character))
+
+(defun hexp (char)
+  (or (char<= #\0 char #\9)
+      (char<= #\a char #\f)
+      (char<= #\A char #\F)))
 
 (defrule optional-underscore (? "_"))
 

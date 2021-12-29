@@ -11,7 +11,8 @@
   :serial t
   :components ((:module "src"
                 :components
-                ((:file "toml-value-parser")
+                ((:file "conditions")
+                 (:file "toml-value-parser")
                  (:file "config")
                  (:file "toml-block")
                  (:file "toml-block-parser")
