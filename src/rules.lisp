@@ -320,7 +320,8 @@
   (let ((code (char-code char)))
     (or (= #x09 code)
         (<= #x20 code #x26)
-        (<= #x28 code #x7E))))
+        (<= #x28 code #x7E)
+        (non-ascii-p char))))
 
 ;; Literal multi-line string.
 
@@ -331,6 +332,8 @@
          "'''")
   (:destructure (_1 _2 text _3)
     (declare (ignore _1 _2 _3))
+    (or (every #'literal-char-p text)
+        (error 'toml-invalid-text-error :text text))
     text))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
