@@ -311,10 +311,16 @@
 
 ;; Literal string.
 
-(defrule literal-string (and "'" (* (not "'")) "'")
+(defrule literal-string (and "'" (* (literal-char-p character)) "'")
   (:destructure (_1 text _2)
     (declare (ignore _1 _2))
     text))
+
+(defun literal-char-p (char)
+  (let ((code (char-code char)))
+    (or (= #x09 code)
+        (<= #x20 code #x26)
+        (<= #x28 code #x7E))))
 
 ;; Literal multi-line string.
 
