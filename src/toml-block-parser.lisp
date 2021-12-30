@@ -45,15 +45,15 @@ Its value can be:
   ((children :initform (list))))
 
 (defmethod print-object ((table table) stream)
-  (format stream "#Table~a"
+  (format stream "#Table(~{ ~S~})"
           (hash-table-alist (children table))))
 
 (defmethod print-object ((table inline-table) stream)
-  (format stream "#InlineTable~a"
+  (format stream "#InlineTable(~{ ~S~})"
           (hash-table-alist (children table))))
 
 (defmethod print-object ((table table-array) stream)
-  (format stream "#ArrayTable~a"
+  (format stream "#ArrayTable(~{ ~S~})"
           (children table)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;

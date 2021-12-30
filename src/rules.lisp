@@ -21,16 +21,17 @@
 
 (defrule toml
     (and (* (or whitespace comment newline))
-         (* (and toml-block
-                 (* (or whitespace comment))
+         (? (and toml-block
+                 (* (or whitespace comment))))
+         (* (and (* (or whitespace comment))
                  newline
-                 (* (or whitespace comment newline))))
-         (? (and toml-block)))
-  (:destructure (_1 definitions optional-last-block)
+                 (* (or whitespace comment newline))
+                 (? toml-block))))
+  (:destructure (_1 first-block blocks)
     (declare (ignore _1))
-    (let ((toml-blocks (append (mapcar (lambda (definition) (car definition))
-                                       definitions)
-                               optional-last-block)))
+    (let ((toml-blocks (append (if first-block (list (first first-block)) nil)
+                               (mapcar (lambda (definition) (fourth definition))
+                                       blocks))))
       (block-parser:parse-toml-blocks toml-blocks))))
 
 (defrule toml-block (or key-value-pair table))

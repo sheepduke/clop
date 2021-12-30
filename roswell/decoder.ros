@@ -45,4 +45,16 @@
                     (format t "~a" json))
       (error () (uiop:quit 1)))))
 
+;; (let* ((clop.config:*value-true* "true")
+;;        (clop.config:*value-false* "false")
+;;        (clop.config:*value-parser* (lambda (type value)
+;;                                      (parse-value type value)))
+;;        (lines '("# This is a line"
+;;                 "key = \"value\" # this is another"))
+;;        (input (str:join #\newline lines)))
+;;   (jsown:to-json
+;;    (clop:parse input :style :jsown)))
+
+;; ----------------------------------------------------------------------------
+
 ;;; vim: set ft=lisp lisp:
