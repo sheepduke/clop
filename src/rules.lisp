@@ -179,7 +179,9 @@
     (or (and float-int float-fraction (? float-exp))
         (and float-int float-exp))
   (:text t)
-  (:lambda (text) (parse-number text)))
+  (:lambda (text)
+    (let ((*read-default-float-format* 'double-float))
+      (parse-number text))))
 
 (defrule float-int (and optional-sign decimal-unsigned-int))
 
@@ -289,20 +291,18 @@
 (defrule multiline-basic-body
     (* (or escaped-char
            escaped-newline
-           (not "\"\"\"")))
-  (:text t)
-  (:lambda (text)
-    (every (lambda (char)
-             (let ((code (char-code char)))
-               (or (char= char #\space)
-                   (char= char #\tab)
-                   (= code #x21)
-                   (<= #x23 code #x5B)
-                   (<= #x5D code #x7E)
-                   (non-ascii-p char)
-                   (error 'toml-invalid-text-error :text text))))
-           text)
-    text))
+           (multiline-basic-text-p (not "\"\"\""))))
+  (:text t))
+
+(defun multiline-basic-text-p (char)
+  (let ((code (char-code char)))
+             (or (char= char #\space)
+                 (char= char #\tab)
+                 (= code #x21)
+                 (<= #x23 code #x5B)
+                 (<= #x5D code #x7E)
+                 (non-ascii-p char)
+                 (error 'toml-invalid-text-error :text char))))
 
 (defrule escaped-newline
     (and "\\" (* whitespace) newline (* (or whitespace #\newline)))
@@ -481,3 +481,4 @@
 
 (defun parse-value (type text)
   (funcall config:*value-parser* type text))
+

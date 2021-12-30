@@ -85,14 +85,18 @@ Its value can be:
         if (null table)
           do (let ((table (make-instance 'table)))
                (when last-name-p
-                 (setf (definition-context table) t))
-               (setf (current-table context) table)
-               (set-child current-table name table))
+                 (setf (definition-context table) t)
+                 (setf (current-table context) table))
+               (set-child current-table name table)
+               (setf current-table table))
         else
           do (case (type-of table)
-               (table (if last-name-p
-                          (error 'toml-redefine-table-error :names names)
-                          (setf current-table table)))
+               (table (progn (when (and last-name-p)
+                               (if (definition-context table)
+                                   (error 'toml-redefine-table-error
+                                          :names names)
+                                   (setf (definition-context table) t)))
+                             (setf current-table table)))
                (table-array (setf current-table (last-child table)))
                (t (error 'toml-redefine-table-error :names names)))))
 
