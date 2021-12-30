@@ -25,6 +25,10 @@
 
 (defgeneric serialize (table style))
 
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                            JSOWN                             ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
 (defmethod serialize ((table table) (style (eql :jsown)))
   (cons :obj
         (loop with children = (children table)
@@ -37,9 +41,35 @@
               for key being the hash-keys of children
               collect (cons key (serialize (gethash key children) style)))))
 
-(defmethod serialize ((table table-array) (style (eql :jsown)))
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                            ALIST                             ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmethod serialize ((table table) (style (eql :alist)))
+  (loop with children = (children table)
+        for key being the hash-keys of children
+        collect (cons key (serialize (gethash key children) style))))
+
+(defmethod serialize ((table inline-table) (style (eql :alist)))
+  (loop with children = (children table)
+        for key being the hash-keys of children
+        collect (cons key (serialize (gethash key children) style))))
+
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+;;;;                            Common                            ;;;;
+;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
+
+(defmethod serialize ((table table-array) style)
   (mapcar (lambda (it) (serialize it style))
           (children table)))
 
-(defmethod serialize ((thing t) (style (eql :jsown)))
+(defmethod serialize (thing style)
+  thing)
+
+(defmethod serialize ((thing list) style)
+  (if (listp (cdr thing))
+      (mapcar (lambda (it) (serialize it style)) thing)
+      thing))
+
+(defmethod serialize (thing (style (eql :raw)))
   thing)

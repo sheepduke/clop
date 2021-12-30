@@ -45,15 +45,15 @@ Its value can be:
   ((children :initform (list))))
 
 (defmethod print-object ((table table) stream)
-  (format stream "#Table(~{~S~})"
+  (format stream "#Table~a"
           (hash-table-alist (children table))))
 
 (defmethod print-object ((table inline-table) stream)
-  (format stream "#InlineTable(~{~S~})"
+  (format stream "#InlineTable~a"
           (hash-table-alist (children table))))
 
 (defmethod print-object ((table table-array) stream)
-  (format stream "#ArrayTable(~{ ~S ~})"
+  (format stream "#ArrayTable~a"
           (children table)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
@@ -133,7 +133,7 @@ Its value can be:
 (defmethod parse-toml-block ((pair toml-key-value-pair) context)
   (let* ((current-table (current-table context))
          (table current-table)
-        key-to-add value-to-add)
+         key-to-add value-to-add)
     ;; Parse keys.
     (loop with keys = (toml-block:keys pair)
           with length = (length keys)
@@ -146,8 +146,7 @@ Its value can be:
                    (setf key-to-add key)
                    (let ((new-table (make-instance
                                      'table
-                                     :definition-context
-                                     current-table)))
+                                     :definition-context current-table)))
                      (set-child table key new-table)
                      (setf table new-table)))
           else
@@ -165,18 +164,30 @@ Its value can be:
                                          :names keys))
                      (t (error 'toml-redefine-property-error
                                :names keys)))))
-    ;; Parse value.
-    (let ((value (toml-block:value pair)))
-      (if (typep value 'toml-block:toml-inline-table)
-          (let ((inline-table (make-instance 'inline-table)))
-            (setf (current-table context) inline-table)
-            (setf value-to-add inline-table)
-            (parse-toml-block value context)
-            (setf (current-table context) current-table))
-          (setf value-to-add value)))
 
-    ;; Add key and value.
-    (set-child table key-to-add value-to-add)))
+    (setf value-to-add
+          (parse-pair-value (toml-block:value pair) context))
+
+    ;; Parse value.
+    (set-child table
+               key-to-add
+               value-to-add
+               ;; (parse-pair-value (toml-block:value pair) context)
+               )))
+
+(defun parse-pair-value (value context)
+  (cond
+    ((typep value 'toml-block:toml-inline-table)
+     (let ((inline-table (make-instance 'inline-table))
+           (current-table (current-table context)))
+       (setf (current-table context) inline-table)
+       (parse-toml-block value context)
+       (setf (current-table context) current-table)
+       inline-table))
+    ((and (listp value)
+          (listp (cdr value)))
+     (mapcar (lambda (v) (parse-pair-value v context)) value))
+    (t value)))
 
 (defmethod parse-toml-block ((toml-table toml-inline-table) context)
   (loop for pair in (toml-block:pairs toml-table)

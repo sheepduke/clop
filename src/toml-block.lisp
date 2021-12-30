@@ -30,15 +30,15 @@
 (defclass toml-array-table (toml-named-table) ())
 
 (defmethod print-object ((obj toml-key-value-pair) stream)
-  (format stream "#KeyValuePair(~a . ~a)"
+  (format stream "#TomlKeyValuePair(~a . ~a)"
           (keys obj)
           (value obj)))
 
 (defmethod print-object ((table toml-named-table) stream)
-  (format stream "#NamedTable(~a)" (names table)))
+  (format stream "#TomlNamedTable(~a)" (names table)))
 
 (defmethod print-object ((table toml-inline-table) stream)
-  (format stream "#InlineTable(~a)" (pairs table)))
+  (format stream "#TomlInlineTable(~a)" (pairs table)))
 
 (defmethod print-object ((table toml-array-table) stream)
-  (format stream "#ArrayTable(~a)" (names table)))
+  (format stream "#TomlArrayTable(~a)" (names table)))
