@@ -308,6 +308,7 @@
   (let ((code (char-code char)))
              (or (char= char #\space)
                  (char= char #\tab)
+                 (char= char #\newline)
                  (= code #x21)
                  (<= #x23 code #x5B)
                  (<= #x5D code #x7E)
