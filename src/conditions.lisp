@@ -30,31 +30,31 @@
 (define-condition toml-table-error (error)
   ((names :accessor names :initarg :names)))
 
-(define-condition toml-redefine-table-error (toml-parse-error) ()
+(define-condition toml-redefine-table-error (toml-table-error) ()
   (:report (lambda (condition stream)
              (format stream
                      "Table name ~a is already defined"
                      (names condition)))))
 
-(define-condition toml-redefine-property-error (toml-parse-error) ()
+(define-condition toml-redefine-property-error (toml-table-error) ()
   (:report (lambda (condition stream)
              (format stream
                      "Property name ~a is already defined"
                      (names condition)))))
 
-(define-condition toml-modify-inline-table-error (toml-parse-error) ()
+(define-condition toml-modify-inline-table-error (toml-table-error) ()
   (:report (lambda (condition stream)
              (format stream
                      "Inline table ~a cannot be modified once defined"
                      (names condition)))))
 
-(define-condition toml-dotted-key-redefine-table-error (toml-parse-error) ()
+(define-condition toml-dotted-key-redefine-table-error (toml-table-error) ()
   (:report (lambda (condition stream)
              (format stream
                      "Dotted key ~a cannot redefine table defined by [Table] header or dotted key from another section"
                      (names condition)))))
 
-(define-condition toml-dotted-key-open-table-array-error (toml-parse-error) ()
+(define-condition toml-dotted-key-open-table-array-error (toml-table-error) ()
   (:report (lambda (condition stream)
              (format stream
                      "Dotted key ~a cannot open table array"

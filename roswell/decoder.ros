@@ -61,3 +61,15 @@ exec ros -Q -- $0 "$@"
 ;; ----------------------------------------------------------------------------
 
 ;;; vim: set ft=lisp lisp:
+
+;; (clop:parse
+;; "        [a.b.c]
+;;          z = 9
+
+;;        [a]
+;;          b.c.t = \"Using dotted keys to add to [a.b.c] after explicitly defining it above is not allowed\""
+;; :style :raw)
+
+;; (clop:parse
+;;  "      [a]
+;;          b.c.t = \"Using dotted keys to add to [a.b.c] after explicitly defining it above is not allowed\"" :style :raw)
