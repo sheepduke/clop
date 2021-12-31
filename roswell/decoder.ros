@@ -36,6 +36,10 @@ exec ros -Q -- $0 "$@"
          (clop.config:*value-false* "false")
          (clop.config:*value-parser* (lambda (type value)
                                        (parse-value type value)))
+         (clop.config:*value--nan* "nan")
+         (clop.config:*value-+nan* "nan")
+         (clop.config:*value-+inf* "+inf")
+         (clop.config:*value--inf* "-inf")
          (lines (loop for line = (read-line *standard-input* nil nil)
                       until (null line)
                       collect line))
@@ -49,11 +53,7 @@ exec ros -Q -- $0 "$@"
 ;;        (clop.config:*value-false* "false")
 ;;        (clop.config:*value-parser* (lambda (type value)
 ;;                                      (parse-value type value)))
-;;        (lines '("[a]
-;; b = 1
-
-;; [a.b]
-;; c = 2"))
+;;        (lines '())
 ;;        (input (str:join #\newline lines)))
 ;;   (jsown:to-json
 ;;    (clop:parse input :style :jsown)))
