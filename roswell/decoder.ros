@@ -49,25 +49,27 @@ exec ros -Q -- $0 "$@"
                     (format t "~a" json))
       (error () (uiop:quit 1)))))
 
-;; (let* ((clop.config:*value-true* "true")
-;;        (clop.config:*value-false* "false")
-;;        (clop.config:*value-parser* (lambda (type value)
-;;                                      (parse-value type value)))
-;;        (lines '())
-;;        (input (str:join #\newline lines)))
-;;   (jsown:to-json
-;;    (clop:parse input :style :jsown)))
-
 ;; ----------------------------------------------------------------------------
 
 ;;; vim: set ft=lisp lisp:
 
-;; (clop:parse
-;; "        [a.b.c]
-;;          z = 9
+;; (let* ((clop.config:*value-true* "true")
+;;        (clop.config:*value-false* "false")
+;;        (clop.config:*value-parser* (lambda (type value)
+;;                                      (parse-value type value)))
+;;        (lines '(
 
-;;        [a]
-;;          b.c.t = \"Using dotted keys to add to [a.b.c] after explicitly defining it above is not allowed\""
-;; :style :raw)
+;; "
+;;        [[arr]]
+;;        a.b.c=1
+;;        a.b.d=2
 
+;;        [[arr]]
+;;        a.b.c=1
+;;        a.b.d=2
 
+;; " ))
+;;        (input (str:join #\newline lines)))
+  
+;;   (jsown:to-json
+;;    (clop:parse input :style :jsown)))

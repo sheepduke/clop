@@ -127,7 +127,9 @@ Its value can be:
                           (error 'toml-redefine-table-error :names names)
                           (setf current-table table)))
                (table-array (if last-name-p
-                                (append-child table (make-instance 'table))
+                                (let ((new-table (make-instance 'table)))
+                                  (append-child table new-table)
+                                  (setf (current-table context) new-table))
                                 (setf current-table (last-child table))))
                (t (error 'toml-redefine-table-error :names names)))))
 
