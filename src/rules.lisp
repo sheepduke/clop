@@ -26,7 +26,8 @@
          (* (and (* (or whitespace comment))
                  newline
                  (* (or whitespace comment newline))
-                 (? toml-block))))
+                 (? toml-block)
+                 (* (or whitespace comment)))))
   (:destructure (_1 first-block blocks)
     (declare (ignore _1))
     (let* ((first-blocks (if first-block (list (first first-block)) nil))
