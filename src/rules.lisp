@@ -29,10 +29,12 @@
                  (? toml-block))))
   (:destructure (_1 first-block blocks)
     (declare (ignore _1))
-    (let ((toml-blocks (append (if first-block (list (first first-block)) nil)
-                               (mapcar (lambda (definition) (fourth definition))
-                                       blocks))))
-      (block-parser:parse-toml-blocks toml-blocks))))
+    (let* ((first-blocks (if first-block (list (first first-block)) nil))
+           (rest-blocks-with-nil (mapcar (lambda (definition)
+                                           (fourth definition))
+                                         blocks))
+           (rest-blocks (remove-if #'null rest-blocks-with-nil)))
+      (block-parser:parse-toml-blocks (append first-blocks rest-blocks)))))
 
 (defrule toml-block (or key-value-pair table))
 
