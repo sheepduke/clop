@@ -1,8 +1,8 @@
-;; #!/bin/sh
-;; #|-*- mode:lisp -*-|#
-;; #|
-;; exec ros -Q -- $0 "$@"
-;; |#
+#!/bin/sh
+#|-*- mode:lisp -*-|#
+#|
+exec ros -Q -- $0 "$@"
+|#
 (progn ;;init forms
   (ros:ensure-asdf)
   #+quicklisp(ql:quickload '(clop jsown) :silent t))
@@ -49,8 +49,11 @@
 ;;        (clop.config:*value-false* "false")
 ;;        (clop.config:*value-parser* (lambda (type value)
 ;;                                      (parse-value type value)))
-;;        (lines '("# This is a line"
-;;                 "key = \"value\" # this is another"))
+;;        (lines '("[a]
+;; b = 1
+
+;; [a.b]
+;; c = 2"))
 ;;        (input (str:join #\newline lines)))
 ;;   (jsown:to-json
 ;;    (clop:parse input :style :jsown)))

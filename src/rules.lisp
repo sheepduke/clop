@@ -36,8 +36,14 @@
 
 (defrule toml-block (or key-value-pair table))
 
-(defrule comment (and #\# (* (not newline)))
+(defrule comment (and #\# (* (comment-char-p character)))
   (:constant nil))
+
+(defun comment-char-p (char)
+  (let ((code (char-code char)))
+    (or (= code #x09)
+        (<= #x20 code #x7E)
+        (non-ascii-p char))))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            Table                             ;;;;
@@ -252,13 +258,13 @@
        (#\f #\page)
        (#\" #\")
        (#\\ #\\)
-       (#\u (parse-unicode (subseq text 2)))
-       (#\U (parse-unicode (subseq text 2)))
+       (#\u (parse-utf8 (subseq text 2)))
+       (#\U (parse-utf8 (subseq text 2)))
        (t (error 'toml-invalid-text-error :text text))))))
 
-(defun parse-unicode (text)
+(defun parse-utf8 (text)
   (or (every #'hexp text)
-      (error 'toml-invalid-unicode-error :text text))
+      (error 'toml-invalid-utf8-error :text text))
   (let ((code (parse-integer text :radix 16)))
     (or (<= #x0000 code #x007F)
         (<= #x0080 code #x07FF)
@@ -269,7 +275,7 @@
         (<= #x10000 code #x3FFFF)
         (<= #x40000 code #xFFFFF)
         (<= #x100000 code #x10FFFF)
-        (error 'toml-invalid-unicode-error :text text))
+        (error 'toml-invalid-utf8-error :text text))
     (code-char code)))
 
 (defun basic-unescaped-char-p (char)
@@ -277,8 +283,8 @@
     (or (char= char #\space)
         (char= char #\tab)
         (= code #x21)
-        (<= #x23 code #x5b)
-        (<= #x5d code #x7e)
+        (<= #x23 code #x5B)
+        (<= #x5D code #x7E)
         (non-ascii-p char))))
 
 ;; Multi-line string.
@@ -482,4 +488,3 @@
 
 (defun parse-value (type text)
   (funcall config:*value-parser* type text))
-

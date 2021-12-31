@@ -2,7 +2,7 @@
   (:use #:cl)
   (:export #:toml-parse-error
            #:toml-invalid-text-error
-           #:toml-invalid-unicode-error
+           #:toml-invalid-utf8-error
            #:toml-table-error
            #:toml-redefine-table-error
            #:toml-redefine-property-error
@@ -21,10 +21,10 @@
                      "Invalid text ~a detected"
                      (text condition)))))
 
-(define-condition toml-invalid-unicode-error (toml-invalid-text-error) ()
+(define-condition toml-invalid-utf8-error (toml-invalid-text-error) ()
   (:report (lambda (condition stream)
              (format stream
-                     "Invalid unicode ~a detected"
+                     "Invalid utf8 ~a detected"
                      (text condition)))))
 
 (define-condition toml-table-error (error)
