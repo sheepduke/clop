@@ -40,14 +40,15 @@ exec ros -Q -- $0 "$@"
          (clop.config:*value-+nan* "nan")
          (clop.config:*value-+inf* "+inf")
          (clop.config:*value--inf* "-inf")
-         (lines (loop for line = (read-line *standard-input* nil nil)
-                      until (null line)
-                      collect line))
-         (input (str:join #\newline lines)))
+         (chars (loop for char = (read-char *standard-input* nil nil)
+                      until (null char)
+                      collect char))
+         (input (coerce chars 'string)))
     (handler-case (let* ((object (clop:parse input :style :jsown))
                          (json (jsown:to-json object)))
                     (format t "~a" json))
-      (error () (uiop:quit 1)))))
+      (error (err) (format t "~a" err)
+        (uiop:quit 1)))))
 
 ;; ----------------------------------------------------------------------------
 
@@ -57,19 +58,7 @@ exec ros -Q -- $0 "$@"
 ;;        (clop.config:*value-false* "false")
 ;;        (clop.config:*value-parser* (lambda (type value)
 ;;                                      (parse-value type value)))
-;;        (lines '(
-
-;; "
-;;        [[arr]]
-;;        a.b.c=1
-;;        a.b.d=2
-
-;;        [[arr]]
-;;        a.b.c=1
-;;        a.b.d=2
-
-;; " ))
-;;        (input (str:join #\newline lines)))
-  
+;;        (input (uiop:read-file-string
+;;                "~/workspace/toml-test/tests/valid/newline-crlf.toml")))
 ;;   (jsown:to-json
 ;;    (clop:parse input :style :jsown)))
