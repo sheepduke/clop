@@ -50,15 +50,4 @@ exec ros -Q -- $0 "$@"
       (error (err) (format t "~a" err)
         (uiop:quit 1)))))
 
-;; ----------------------------------------------------------------------------
-
 ;;; vim: set ft=lisp lisp:
-
-;; (let* ((clop.config:*value-true* "true")
-;;        (clop.config:*value-false* "false")
-;;        (clop.config:*value-parser* (lambda (type value)
-;;                                      (parse-value type value)))
-;;        (input (uiop:read-file-string
-;;                "~/workspace/toml-test/tests/valid/newline-crlf.toml")))
-;;   (jsown:to-json
-;;    (clop:parse input :style :jsown)))
