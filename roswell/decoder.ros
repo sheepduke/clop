@@ -5,7 +5,7 @@ exec ros -Q -- $0 "$@"
 |#
 (progn ;;init forms
   (ros:ensure-asdf)
-  #+quicklisp(ql:quickload '(clop jsown) :silent t))
+  #+quicklisp(ql:quickload '(clop jsown flexi-streams) :silent t))
 
 (defpackage :ros.script.decoder.3848652702
   (:use :cl)
@@ -40,10 +40,10 @@ exec ros -Q -- $0 "$@"
          (clop.config:*value-+nan* "nan")
          (clop.config:*value-+inf* "+inf")
          (clop.config:*value--inf* "-inf")
-         (chars (loop for char = (read-char *standard-input* nil nil)
-                      until (null char)
-                      collect char))
-         (input (coerce chars 'string)))
+         (bytes (loop for byte = (read-byte *standard-input* nil nil)
+                      until (null byte)
+                      collect byte))
+         (input (flex:octets-to-string bytes :external-format :utf8)))
     (handler-case (let* ((object (clop:parse input :style :jsown))
                          (json (jsown:to-json object)))
                     (format t "~a" json))
