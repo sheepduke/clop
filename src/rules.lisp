@@ -301,7 +301,8 @@
 (defrule multiline-basic-body
     (* (or escaped-newline
            escaped-char
-           (multiline-basic-text-p (not (and "\"\"\"" (! "\""))))))
+           (multiline-basic-text-p (not (or (and "\"\"\"" (! "\""))
+                                            (and "\"\"\"\"\"\""))))))
   (:text t))
 
 (defun multiline-basic-text-p (char)
@@ -340,7 +341,8 @@
 (defrule multiline-literal-string
     (and "'''"
          (? newline)
-         (* (not (and "'''" (! "'"))))
+         (* (multiline-literal-char-p (not (or (and "'''" (! "'"))
+                                               (and "''''''")))))
          "'''")
   (:destructure (_1 _2 text _3)
     (declare (ignore _1 _2 _3))
