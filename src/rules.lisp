@@ -299,9 +299,9 @@
     text))
 
 (defrule multiline-basic-body
-    (* (or escaped-char
-           escaped-newline
-           (multiline-basic-text-p (not "\"\"\""))))
+    (* (or escaped-newline
+           escaped-char
+           (multiline-basic-text-p (not (and "\"\"\"" (! "\""))))))
   (:text t))
 
 (defun multiline-basic-text-p (char)
@@ -340,13 +340,17 @@
 (defrule multiline-literal-string
     (and "'''"
          (? newline)
-         (* (not "'''"))
+         (* (not (and "'''" (! "'"))))
          "'''")
   (:destructure (_1 _2 text _3)
     (declare (ignore _1 _2 _3))
-    (or (every #'literal-char-p text)
-        (error 'toml-invalid-text-error :text text))
     text))
+
+(defun multiline-literal-char-p (char)
+  (or (char= char #\')
+      (char= char #\newline)
+      (literal-char-p char)
+      (error 'toml-invalid-text-error :text char)))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                          Date Time                           ;;;;
@@ -470,8 +474,9 @@
 
 (defun non-ascii-p (char)
   (let ((code (char-code char)))
-    (or (<= #x80 code #xD7FF)
-        (<= #xE000 code #x10FFF))))
+    (and (or (<= #x80 code #xD7FF)
+             (<= #xE000 code #x10FFF))
+         char)))
 
 (defrule optional-underscore (? "_"))
 
