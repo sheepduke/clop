@@ -81,25 +81,25 @@ Its value can be:
         for name in names
         for i from 1
         for last-name-p = (= i length)
-        for table = (get-child current-table name)
-        if (null table)
-          do (let ((table (make-instance 'table)))
-               (when last-name-p
-                 (setf (definition-context table) t)
-                 (setf (current-table context) table))
-               (set-child current-table name table)
-               (setf current-table table))
-        else
-          do (case (type-of table)
-               (table (if last-name-p
-                          (progn (if (definition-context table)
-                                     (error 'toml-redefine-table-error
-                                            :names names)
-                                     (setf (definition-context table) t))
-                                 (setf (current-table context) table))
-                          (setf current-table table)))
-               (table-array (setf current-table (last-child table)))
-               (t (error 'toml-redefine-table-error :names names)))))
+        do (multiple-value-bind (table table-found-p)
+               (get-child current-table name)
+             (if table-found-p
+                 (case (type-of table)
+                   (table (if last-name-p
+                              (progn (if (definition-context table)
+                                         (error 'toml-redefine-table-error
+                                                :names names)
+                                         (setf (definition-context table) t))
+                                     (setf (current-table context) table))
+                              (setf current-table table)))
+                   (table-array (setf current-table (last-child table)))
+                   (t (error 'toml-redefine-table-error :names names)))
+                 (let ((table (make-instance 'table)))
+                   (when last-name-p
+                     (setf (definition-context table) t)
+                     (setf (current-table context) table))
+                   (set-child current-table name table)
+                   (setf current-table table))))))
 
 (defmethod parse-toml-block ((toml-table toml-array-table) context)
   (loop with names = (toml-block:names toml-table)
@@ -108,30 +108,30 @@ Its value can be:
         for name in names
         for i from 1
         for last-name-p = (= i length)
-        for table = (get-child current-table name)
-        if (null table)
-          do (if last-name-p
-                 ;; For last part of names, create table array.
-                 (let ((table (make-instance 'table))
-                       (table-array (make-instance 'table-array)))
-                   (set-child current-table name table-array)
-                   (append-child table-array table)
-                   (setf (current-table context) table))
-                 ;; For middle part of names, create normal table.
-                 (let ((table (make-instance 'table)))
-                   (set-child current-table name table)
-                   (setf current-table table)))
-        else
-          do (case (type-of table)
-               (table (if last-name-p
-                          (error 'toml-redefine-table-error :names names)
-                          (setf current-table table)))
-               (table-array (if last-name-p
-                                (let ((new-table (make-instance 'table)))
-                                  (append-child table new-table)
-                                  (setf (current-table context) new-table))
-                                (setf current-table (last-child table))))
-               (t (error 'toml-redefine-table-error :names names)))))
+        do (multiple-value-bind (table table-found-p)
+               (get-child current-table name)
+             (if table-found-p
+                 (case (type-of table)
+                   (table (if last-name-p
+                              (error 'toml-redefine-table-error :names names)
+                              (setf current-table table)))
+                   (table-array (if last-name-p
+                                    (let ((new-table (make-instance 'table)))
+                                      (append-child table new-table)
+                                      (setf (current-table context) new-table))
+                                    (setf current-table (last-child table))))
+                   (t (error 'toml-redefine-table-error :names names)))
+                 (if last-name-p
+                     ;; For last part of names, create table array.
+                     (let ((table (make-instance 'table))
+                           (table-array (make-instance 'table-array)))
+                       (set-child current-table name table-array)
+                       (append-child table-array table)
+                       (setf (current-table context) table))
+                     ;; For middle part of names, create normal table.
+                     (let ((table (make-instance 'table)))
+                       (set-child current-table name table)
+                       (setf current-table table)))))))
 
 (defmethod parse-toml-block ((pair toml-key-value-pair) context)
   (let* ((current-table (current-table context))
