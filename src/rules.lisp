@@ -306,14 +306,15 @@
 
 (defun multiline-basic-text-p (char)
   (let ((code (char-code char)))
-             (or (char= char #\space)
-                 (char= char #\tab)
-                 (char= char #\newline)
-                 (= code #x21)
-                 (<= #x23 code #x5B)
-                 (<= #x5D code #x7E)
-                 (non-ascii-p char)
-                 (error 'toml-invalid-text-error :text char))))
+    (or (char= char #\space)
+        (char= char #\tab)
+        (char= char #\newline)
+        (char= char #\")
+        (= code #x21)
+        (<= #x23 code #x5B)
+        (<= #x5D code #x7E)
+        (non-ascii-p char)
+        (error 'toml-invalid-text-error :text char))))
 
 (defrule escaped-newline
     (and "\\" (* whitespace) newline (* (or whitespace #\newline)))
