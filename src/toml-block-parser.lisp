@@ -92,7 +92,10 @@ Its value can be:
                                          (setf (definition-context table) t))
                                      (setf (current-table context) table))
                               (setf current-table table)))
-                   (table-array (setf current-table (last-child table)))
+                   (table-array (if last-name-p
+                                    (error 'toml-redefine-table-error
+                                           :names names)
+                                    (setf current-table (last-child table))))
                    (t (error 'toml-redefine-table-error :names names)))
                  (let ((table (make-instance 'table)))
                    (when last-name-p
