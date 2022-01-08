@@ -20,10 +20,21 @@
 (in-package clop)
 
 (defun parse (text &key (style :alist))
+  "Parse given string TEXT and convert the result to given STYLE.
+The STYLE can be one of:
+* :alist (the default)
+* :jsown (jsown-like object)
+* :raw (should be rarely used)
+
+The top-level of result is an alist.
+
+You may implement your own style by implementing SERIALIZE method."
   (let* ((parsed (esrap:parse 'toml text)))
     (serialize parsed style)))
 
-(defgeneric serialize (table style))
+(defgeneric serialize (table style)
+  (:documentation "Convert given TABLE to STYLE.
+The TABLE should be the root table containing "))
 
 ;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;;
 ;;;;                            JSOWN                             ;;;;
