@@ -53,12 +53,12 @@
 (test value-float
   ;; Normal floats.
   (is (= 1 (parse 'rules::value "+1.0")))
-  (is (= 3.01234 (parse 'rules::value "3.01_234")))
+  (is (= 3.01234d0 (parse 'rules::value "3.01_234")))
   (is (= 0 (parse 'rules::value "+0.0")))
   (is (= 0 (parse 'rules::value "-0.0")))
-  (is (= -0.01 (parse 'rules::value "-0.01")))
-  (is (= -0.02 (parse 'rules::value "-2E-2")))
-  (is (= 5e22 (parse 'rules::value "+5e+22")))
+  (is (= -0.01d0 (parse 'rules::value "-0.01")))
+  (is (= -0.02d0 (parse 'rules::value "-2E-2")))
+  (is (= 5d22 (parse 'rules::value "+5e+22")))
 
   ;; Invalid floats.
   (signals esrap-parse-error (parse 'rules::value "6.e+20"))
