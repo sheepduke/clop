@@ -22,20 +22,23 @@
 (defclass collection ()
   ((children :accessor children
              :initform (make-hash-table :test #'equal)
-             :documentation "The child elements of this table. It might be ")))
+             :documentation "A table of any kind. Note that for a table, its own name is not stored as a property of itself, but as a hash key in children property of its parent collection. The parsed result is a table representing root table.")))
 
 (defclass table (collection)
   ((definition-context :type boolean
                        :accessor definition-context
                        :initarg :definition-context
                        :initform nil
-                       :documentation "Indicates if the table is defined or not.
+                       :documentation "Internal use.
+
+Indicates if the table is defined or not.
 A table is defined in the following ways:
 1. By [Table] header.
 2. By being a path of dotted.key.tables. In this case, all the tables along the
 way are created and defined.
 
 Its value can be:
+- NIL means table is opened but not defined.
 - T means defined via [Table] header.
 - A table instance means defined under corresponding table section.")))
 
