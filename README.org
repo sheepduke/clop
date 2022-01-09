@@ -1,0 +1,105 @@
+* CLOP - Common Lisp tOml Parser
+
+** Overview
+
+[[https://toml.io][Tom's Obvious Minimal Language (TOML)]] is a human friendly configuration file format. This library implements a parser (decoder) for it.
+
+Clop strictly follows TOML 1.0 specification and is fully compatible with it. It passes all 296 tests defined in [[https://github.com/BurntSushi/toml-test][BurntSushi/toml-test]].
+
+** Installation
+
+Once it gets into Quicklisp, you can load it by:
+
+#+BEGIN_SRC lisp
+  ;; Load it.
+  (ql:quickload "clop")
+  
+  ;; Run some basic tests.
+  (asdf:test-system "clop")
+#+END_SRC
+
+If you want to run comprehensive tests, you need to first clone [[https://github.com/BurntSushi/toml-test][toml-test]] and set it up locally.
+
+Use the following command to test it:
+
+#+BEGIN_SRC sh
+  cd /path/to/clop/roswell
+  ros build decoder.ros
+  
+  /path/to/toml-test/toml-test ./decoder
+#+END_SRC
+
+You should now see a line of:
+
+#+BEGIN_SRC text
+  toml-test [/path/to/clop/roswell/decoder]: using embedded tests: 296 passed,  0 failed
+#+END_SRC
+
+
+** Usage
+
+*** Functions
+
+The main entry point of Clop is ~parse~ function.
+
+#+BEGIN_SRC lisp
+  (defparameter +toml-text+ "
+[server]
+port = 5000
+print-access-log = false
+")
+  
+  (clop:parse +toml-text+)
+  ; => (("server" ("port" . 5000) ("print-access-log")))
+#+END_SRC
+
+This function takes an optional keyword argument ~style~ that controls the output style:
+
+- ~:alist~. The default. TOML tables are transformed to alists.
+- ~:jsown~. TOML tables are transformed to jsown style ~(:obj "key" "value")~.
+- ~:raw~. TOML tables are transformed to Clop internal representations, i.e. classes ~table~, ~table-array~ and ~inline-table~.
+
+*** Configurations
+
+The behavior of Clop can be tuned by settings configuration variables. Wrap them in a let lexical context or change their values globally to make it work.
+
+|---------------+---------------+----------------------------|
+| Variable      | Default Value | Meaning                    |
+|---------------+---------------+----------------------------|
+| *value-+inf*  | :+INF         | The value of +inf          |
+| *value--inf*  | :-INF         | The value of -inf          |
+| *value-+nan*  | :+NAN         | The value of +nan          |
+| *value--nan*  | :-NAN         | The value of -nan          |
+| *value-true*  | T             | The value of boolean true  |
+| *value-false* | NIL           | The value of boolean false |
+|---------------+---------------+----------------------------|
+
+*** Extending Clop
+
+Clop implementation has 2 concepts: value parser and block parser.
+
+- Value parser is used for handling basic values, i.e. string, integer, float, bool, datetime, datetime-local, date-local, time-local.
+
+- Block parser is used for handling TOML blocks, i.e. key-value-pair, table, inline-table and table-array.
+
+**** Tuning Value Parser
+
+For basic values, you may:
+
+1. Define your own value parser function that takes 2 arguments: type and value, and return the resulting value.
+2. Set ~clop.config:*value-parser*~ variable to your own function.
+
+You may refer to ~roswell/decoder.ros~ for an example. ~toml-test~ requires values to be a JSON object like:
+
+#+BEGIN_SRC json
+  {
+    "type": "integer",
+    "value": 123
+  }
+#+END_SRC
+
+Code in ~roswell/decoder.ros~ tunes value parser to return such ~jsown~ object.
+
+**** Tuning Block Parser
+
+Instead of implementing your own block parser, you may pass a ~:raw~ style to ~clop:parse~ function and start from the return value. Check docstrings in ~src/toml-block-parser~ for more detail.
