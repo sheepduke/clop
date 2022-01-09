@@ -1,0 +1,7 @@
+* Changelog
+
+** v1.0.0
+
+- Implement basic parsing function.
+- Pass toml-test tests.
+- Add support for behavior tuning via configuration.
