@@ -6,6 +6,8 @@
 
 Clop strictly follows TOML 1.0 specification and is fully compatible with it. It passes all 296 tests defined in [[https://github.com/BurntSushi/toml-test][BurntSushi/toml-test]].
 
+It is implemented by utilizing [[https://github.com/scymtym/esrap][ESRAP]], which is a really awesome library.
+
 ** Installation
 
 Once it gets into Quicklisp, you can load it by:
