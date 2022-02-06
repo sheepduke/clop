@@ -10,9 +10,7 @@
                 #:signals
                 #:is
                 #:def-suite*
-                #:test)
-  (:import-from #:serapeum
-                #:op))
+                #:test))
 
 (in-package clop-tests.rules)
 
