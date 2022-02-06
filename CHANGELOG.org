@@ -1,5 +1,9 @@
 * Changelog
 
+** v1.0.1
+
+- Fix invalid ~serapeum~ reference error.
+
 ** v1.0.0
 
 - Implement basic parsing function.
